@@ -10,6 +10,17 @@ import type {
 // Track inserted player IDs across batches to avoid duplicates
 const insertedPlayers = new Set<string>();
 
+/**
+ * Seed the insertedPlayers set from existing DB rows.
+ * Must be called before loadBatch() in update flows to avoid duplicate player inserts.
+ */
+export async function seedInsertedPlayers(conn: DuckDBConnection): Promise<void> {
+  const result = await conn.runAndReadAll("SELECT player_id FROM players");
+  for (const row of result.getRowObjectsJson()) {
+    insertedPlayers.add(row.player_id as string);
+  }
+}
+
 export async function loadBatch(
   conn: DuckDBConnection,
   matches: ParsedMatch[]

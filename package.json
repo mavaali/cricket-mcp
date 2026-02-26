@@ -10,7 +10,8 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "ingest": "tsx src/index.ts ingest",
-    "serve": "tsx src/index.ts serve"
+    "serve": "tsx src/index.ts serve",
+    "update": "tsx src/index.ts update"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

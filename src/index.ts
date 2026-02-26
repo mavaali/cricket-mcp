@@ -2,7 +2,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
-import { runIngest } from "./ingest/pipeline.js";
+import { runIngest, runUpdate } from "./ingest/pipeline.js";
 import { startServer } from "./server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +34,25 @@ program
       dataDir: options.dataDir,
       dbPath: options.db,
       force: options.force,
+    });
+  });
+
+program
+  .command("update")
+  .description("Download recent matches from Cricsheet and add to existing DB")
+  .option("--days <days>", "Recent period: 2, 7, or 30 days", "7")
+  .option("--data-dir <dir>", "Data directory", DEFAULT_DATA_DIR)
+  .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
+  .action(async (options) => {
+    const days = parseInt(options.days, 10);
+    if (![2, 7, 30].includes(days)) {
+      console.error("--days must be 2, 7, or 30");
+      process.exit(1);
+    }
+    await runUpdate({
+      days: days as 2 | 7 | 30,
+      dataDir: options.dataDir,
+      dbPath: options.db,
     });
   });
 

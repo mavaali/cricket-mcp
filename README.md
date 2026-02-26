@@ -115,6 +115,24 @@ Creating indexes...
   Players:    14406
 ```
 
+### Keep data up to date
+
+Cricsheet publishes new matches daily. Instead of re-ingesting everything, pull just the recent matches:
+
+```bash
+npm run update          # last 7 days (default)
+npm run update -- --days 2   # last 2 days
+npm run update -- --days 30  # last 30 days
+```
+
+Downloads `recently_played_N_json.zip` from Cricsheet, skips matches already in the DB, inserts only new ones. Takes seconds.
+
+For a full rebuild (e.g., to pick up Cricsheet corrections to historical data):
+
+```bash
+npm run ingest -- --force
+```
+
 ### Connect to Claude Desktop
 
 Add this to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
