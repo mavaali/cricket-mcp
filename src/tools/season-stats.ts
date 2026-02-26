@@ -6,10 +6,8 @@ import {
   MatchFilterSchema,
   buildMatchFilter,
   buildWhereString,
+  BOWLING_WICKET_KINDS,
 } from "../queries/common.js";
-
-/** Bowling dismissal types — wicket_kind values that count as bowling wickets (excludes run outs) */
-const BOWLING_WICKET_KINDS = `('bowled', 'caught', 'caught and bowled', 'lbw', 'stumped', 'hit wicket')`;
 
 export function registerSeasonStats(
   server: McpServer,
