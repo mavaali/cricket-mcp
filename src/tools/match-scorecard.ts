@@ -92,7 +92,7 @@ export function registerMatchScorecard(
             (SELECT COUNT(*) FROM bowler_overs bo WHERE bo.bowler = d.bowler AND bo.over_runs = 0
               AND bo.legal_balls >= 6) AS maidens,
             SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs,
-            COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS wickets,
+            COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
             ROUND(
               CASE WHEN SUM(CASE WHEN d.extras_wides = 0 AND d.extras_noballs = 0 THEN 1 ELSE 0 END) > 0
               THEN SUM(d.runs_total - d.extras_byes - d.extras_legbyes)::DOUBLE /

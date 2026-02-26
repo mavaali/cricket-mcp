@@ -88,16 +88,16 @@ export function buildStyleMatchupQuery(options: {
         COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls_faced,
         SUM(d.runs_batter) AS runs,
         COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter
-          AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}
+          AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}
         ) AS dismissals,
         COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0) AS dot_balls,
         COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours,
         COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes,
         ROUND(
           CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter
-            AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) > 0
+            AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) > 0
           THEN SUM(d.runs_batter)::DOUBLE / COUNT(*) FILTER (WHERE d.is_wicket
-            AND d.wicket_player_out = d.batter AND d.wicket_kind IN \${BOWLING_WICKET_KINDS})
+            AND d.wicket_player_out = d.batter AND d.wicket_kind IN ${BOWLING_WICKET_KINDS})
           ELSE NULL END, 2
         ) AS average,
         ROUND(
@@ -141,12 +141,12 @@ export function buildStyleMatchupQuery(options: {
         COUNT(DISTINCT d.match_id || '-' || d.innings_number) AS innings,
         COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS balls_bowled,
         SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-        COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS wickets,
+        COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
         COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dot_balls,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) > 0
+          CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) > 0
           THEN SUM(d.runs_total - d.extras_byes - d.extras_legbyes)::DOUBLE
-               / COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS})
+               / COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS})
           ELSE NULL END, 2
         ) AS average,
         ROUND(
@@ -156,9 +156,9 @@ export function buildStyleMatchupQuery(options: {
           ELSE NULL END, 2
         ) AS economy,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) > 0
+          CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) > 0
           THEN COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0)::DOUBLE
-               / COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS})
+               / COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS})
           ELSE NULL END, 2
         ) AS bowling_strike_rate,
         ROUND(

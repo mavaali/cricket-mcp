@@ -242,7 +242,7 @@ export function registerWhatIf(
               d.innings_number,
               COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
               SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS wickets
+              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
             WHERE d.bowler ILIKE '%' || $player_name || '%'
@@ -257,7 +257,7 @@ export function registerWhatIf(
               d.innings_number,
               COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
               SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS wickets
+              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
             WHERE d.bowler ILIKE '%' || $player_name || '%'
