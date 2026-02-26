@@ -10,13 +10,17 @@ A cricket stats nerd's dream, wired directly into Claude.
 
 Ask Claude things like:
 - *"How does Kohli bat against Hazlewood in ODIs?"*
-- *"Who has the best bowling average against left-handers in T20Is since 2020?"*
-- *"Show me Bumrah's record against Warner in Tests"*
-- *"What are the highest partnerships at the MCG?"*
+- *"Best death bowlers in IPL by economy"*
+- *"Kohli's average while chasing in ODIs"*
+- *"Who is close to 10000 Test runs?"*
+- *"What would Kohli average without Hazlewood?"*
+- *"Does the toss matter in T20s?"*
+- *"IPL 2024 standings and top performers"*
+- *"Which bowlers have the best dot ball % at the death?"*
+- *"Which batters are improving this season?"*
 - *"Break down Rohit Sharma's record against each of England's bowlers"*
-- *"Which bowlers have dismissed Williamson the most in Tests?"*
 
-## Tools (14 total)
+## Tools (23 total)
 
 ### Player Stats
 | Tool | What it does |
@@ -51,6 +55,27 @@ Ask Claude things like:
 | `get_bowler_vs_batter` | Bowler's record against a specific batter |
 | `get_batter_vs_team_bowling` | Batter vs each bowler in an opposition team |
 | `get_matchup_records` | Leaderboards — who dismisses X the most? Who scores most off Y? |
+
+### Phase & Situation Analysis
+| Tool | What it does |
+|------|-------------|
+| `get_phase_stats` | Batting/bowling stats by phase — powerplay (1-6), middle (7-15), death (16-20) |
+| `get_situational_stats` | Stats while chasing, setting, under pressure, or by batting position. Format-aware (Tests use 4th innings for chasing) |
+| `get_toss_analysis` | Toss impact on outcomes — bat first vs chase win %, by venue/team/format |
+| `get_discipline_stats` | The boring stats that win tournaments — dot ball %, wide rate, boundary % |
+
+### Team & Tournament
+| Tool | What it does |
+|------|-------------|
+| `get_team_form` | Recent form — last N results, win streak, avg scores, run rate |
+| `get_tournament_summary` | Standings, top batters, top bowlers for any tournament/season |
+
+### Career & Trends
+| Tool | What it does |
+|------|-------------|
+| `get_milestone_tracker` | Players near career milestones (10000 runs, 500 wickets, etc.) |
+| `get_emerging_players` | Players whose recent stats significantly outperform career baseline |
+| `get_what_if` | Counterfactual — recalculate career stats excluding opponents, bowlers, venues, or tournaments |
 
 Every tool supports filters: **format** (Test/ODI/T20/IT20), **gender**, **team**, **opposition**, **venue**, **city**, **season**, **tournament**, and **date range**.
 
@@ -115,27 +140,47 @@ That's it. Start asking cricket questions.
 
 Uses `get_batter_vs_bowler` with `batter_name: "Kohli"`, `bowler_name: "Hazlewood"`, `match_type: "ODI"`.
 
-### "Who are the top 5 run scorers in IPL history?"
+### "Best death bowlers in IPL"
 
-Uses `get_batting_records` with `record_type: "most_runs"`, `event_name: "Indian Premier League"`, `limit: 5`.
+Uses `get_phase_stats` with `phase: "death"`, `perspective: "bowling"`, `event_name: "Indian Premier League"`, `sort_by: "economy"`.
+
+### "Kohli's record while chasing in ODIs"
+
+Uses `get_situational_stats` with `situation: "chasing"`, `player_name: "Kohli"`, `match_type: "ODI"`.
+
+### "Who is close to 10000 ODI runs?"
+
+Uses `get_milestone_tracker` with `milestone_type: "runs"`, `threshold: 10000`, `match_type: "ODI"`.
+
+### "What would Kohli average without Hazlewood?"
+
+Uses `get_what_if` with `player_name: "Kohli"`, `perspective: "batting"`, `exclude_bowler: "Hazlewood"`, `match_type: "ODI"`.
+
+### "IPL 2024 standings and top performers"
+
+Uses `get_tournament_summary` with `event_name: "Indian Premier League"`, `season: "2024"`.
+
+### "Does the toss matter in T20s?"
+
+Uses `get_toss_analysis` with `match_type: "T20"`.
 
 ### "India vs Australia head to head in Tests"
 
 Uses `get_head_to_head` with `team1: "India"`, `team2: "Australia"`, `match_type: "Test"`.
 
-### "Which bowlers trouble Williamson the most in Tests?"
+### "Which batters are improving in T20s this season?"
 
-Uses `get_matchup_records` with `batter_name: "Williamson"`, `record_type: "most_dismissals"`, `match_type: "Test"`.
+Uses `get_emerging_players` with `perspective: "batting"`, `match_type: "T20"`.
 
-### "Break down Rohit's record against England's bowlers in ODIs"
+### "Who has the best dot ball % at the death in IPL?"
 
-Uses `get_batter_vs_team_bowling` with `batter_name: "Rohit"`, `opposition: "England"`, `match_type: "ODI"`.
+Uses `get_discipline_stats` with `perspective: "bowling"`, `phase: "death"`, `event_name: "Indian Premier League"`, `sort_by: "dot_ball_pct"`.
 
 ## How it works
 
 1. **Data**: [Cricsheet](https://cricsheet.org) provides free, open ball-by-ball data for every international and major domestic cricket match in JSON format.
 2. **Storage**: The `ingest` command downloads, parses, and loads this into a local [DuckDB](https://duckdb.org) database — a columnar analytics engine that eats aggregation queries for breakfast.
-3. **Server**: The MCP server exposes 14 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
+3. **Server**: The MCP server exposes 23 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
 
 ### Database schema
 
@@ -153,6 +198,7 @@ Four tables in a star schema:
 - **Legal deliveries** exclude wides AND noballs
 - **Bowling wickets** only count bowling dismissals (not run outs)
 - **Maidens** computed at the over level
+- **Test innings** — chasing means 4th innings, setting means 1st innings
 
 ## Data source
 

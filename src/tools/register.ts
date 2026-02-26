@@ -14,6 +14,15 @@ import { registerBatterVsBowler } from "./batter-vs-bowler.js";
 import { registerBowlerVsBatter } from "./bowler-vs-batter.js";
 import { registerBatterVsTeamBowling } from "./batter-vs-team-bowling.js";
 import { registerMatchupRecords } from "./matchup-records.js";
+import { registerPhaseStats } from "./phase-stats.js";
+import { registerSituationalStats } from "./situational-stats.js";
+import { registerTossAnalysis } from "./toss-analysis.js";
+import { registerTeamForm } from "./team-form.js";
+import { registerTournamentSummary } from "./tournament-summary.js";
+import { registerMilestoneTracker } from "./milestone-tracker.js";
+import { registerDisciplineStats } from "./discipline-stats.js";
+import { registerEmergingPlayers } from "./emerging-players.js";
+import { registerWhatIf } from "./what-if.js";
 
 export function registerAllTools(
   server: McpServer,
@@ -33,4 +42,13 @@ export function registerAllTools(
   registerBowlerVsBatter(server, db);
   registerBatterVsTeamBowling(server, db);
   registerMatchupRecords(server, db);
+  registerPhaseStats(server, db);
+  registerSituationalStats(server, db);
+  registerTossAnalysis(server, db);
+  registerTeamForm(server, db);
+  registerTournamentSummary(server, db);
+  registerMilestoneTracker(server, db);
+  registerDisciplineStats(server, db);
+  registerEmergingPlayers(server, db);
+  registerWhatIf(server, db);
 }
