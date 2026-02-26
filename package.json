@@ -1,0 +1,28 @@
+{
+  "name": "cricket-mcp",
+  "version": "1.0.0",
+  "description": "Cricket statistics MCP server powered by Cricsheet ball-by-ball data",
+  "type": "module",
+  "bin": {
+    "cricket-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "ingest": "tsx src/index.ts ingest",
+    "serve": "tsx src/index.ts serve"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@duckdb/node-api": "^1.4.4-r.1",
+    "zod": "^3.25.0",
+    "commander": "^13.0.0",
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0",
+    "@types/adm-zip": "^0.5.7"
+  }
+}
