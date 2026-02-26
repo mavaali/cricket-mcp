@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { getConnection } from "./db/connection.js";
+import { migrateSchema } from "./db/schema.js";
 import { registerAllTools } from "./tools/register.js";
 
 export async function startServer(dbPath: string): Promise<void> {
@@ -10,6 +11,7 @@ export async function startServer(dbPath: string): Promise<void> {
   });
 
   const connection = await getConnection(dbPath);
+  await migrateSchema(connection);
 
   registerAllTools(server, connection);
 

@@ -33,6 +33,10 @@ export function registerSearchPlayers(
         SELECT
           p.player_id,
           p.player_name,
+          p.batting_style,
+          p.bowling_style,
+          p.playing_role,
+          p.country,
           COUNT(DISTINCT d_bat.match_id) AS matches_batted,
           COALESCE(SUM(d_bat.runs_batter), 0) AS total_runs,
           COUNT(DISTINCT d_bowl.match_id) AS matches_bowled,
