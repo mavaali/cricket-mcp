@@ -20,7 +20,7 @@ Ask Claude things like:
 - *"Which batters are improving this season?"*
 - *"Break down Rohit Sharma's record against each of England's bowlers"*
 
-## Tools (25 total)
+## Tools (26 total)
 
 ### Player Stats
 | Tool | What it does |
@@ -53,6 +53,7 @@ Ask Claude things like:
 | `get_matchup` | Head-to-head stats between a specific batter and bowler (use `perspective` for sort order) |
 | `get_batter_vs_team_bowling` | Batter vs each bowler in an opposition team |
 | `get_matchup_records` | Leaderboards — who dismisses X the most? Who scores most off Y? |
+| `get_style_matchup` | Batter vs bowling styles (pace/spin, left-arm/right-arm) or bowler vs batting hand |
 
 ### Phase & Situation Analysis
 | Tool | What it does |
@@ -144,6 +145,18 @@ For a full rebuild (e.g., to pick up Cricsheet corrections to historical data):
 npm run ingest -- --force
 ```
 
+### Enrich player metadata
+
+Cricsheet data doesn't include player attributes like batting hand or bowling style. The repo includes `data/player_meta.csv` (from the [cricketdata](https://github.com/ropenscilabs/cricketdata) R package, 16K players) which adds these attributes. Run this after your first ingest:
+
+```bash
+npm run enrich -- --csv data/player_meta.csv
+```
+
+This enables the `get_style_matchup` tool — e.g., *"How does Kohli bat against left-arm pace?"* or *"Bumrah's record against left-handers"*.
+
+> **Note:** The MCP server must not be running when you enrich (DuckDB allows only one write connection). Quit Claude Desktop first, run the command, then reopen.
+
 ### Connect to Claude Desktop
 
 Add this to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
@@ -197,6 +210,14 @@ Uses `get_toss_analysis` with `match_type: "T20"`.
 
 Uses `get_head_to_head` with `team1: "India"`, `team2: "Australia"`, `match_type: "Test"`.
 
+### "How does Kohli bat against left-arm pace?"
+
+Uses `get_style_matchup` with `player_name: "Kohli"`, `perspective: "batting"`, `grouping: "arm"`.
+
+### "Bumrah's record against left-handers"
+
+Uses `get_style_matchup` with `player_name: "Bumrah"`, `perspective: "bowling"`.
+
 ### "Which batters are improving in T20s this season?"
 
 Uses `get_emerging_players` with `perspective: "batting"`, `match_type: "T20"`.
@@ -209,12 +230,12 @@ Uses `get_discipline_stats` with `perspective: "bowling"`, `phase: "death"`, `ev
 
 1. **Data**: [Cricsheet](https://cricsheet.org) provides free, open ball-by-ball data for every international and major domestic cricket match in JSON format.
 2. **Storage**: The `ingest` command downloads, parses, and loads this into a local [DuckDB](https://duckdb.org) database — a columnar analytics engine that eats aggregation queries for breakfast.
-3. **Server**: The MCP server exposes 25 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
+3. **Server**: The MCP server exposes 26 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
 
 ### Database schema
 
 Four tables in a star schema:
-- **players** — 14K players with Cricsheet registry IDs
+- **players** — 14K players with Cricsheet registry IDs (optionally enriched with batting style, bowling style, playing role, country)
 - **matches** — 21K matches with metadata (teams, venue, outcome, tournament)
 - **innings** — innings-level data (batting/bowling team, targets, declarations)
 - **deliveries** — 10.9M rows, one per ball bowled (batter, bowler, runs, extras, wickets)
@@ -230,6 +251,12 @@ Four tables in a star schema:
 - **Test innings** — chasing means 4th innings, setting means 1st innings
 
 ## Changelog
+
+### v0.3.0
+- Player enrichment pipeline: `npm run enrich` loads batting/bowling style metadata from bundled CSV (16K players from cricketdata R package)
+- New `get_style_matchup` tool: query batting stats by bowling style (pace/spin, arm categories) or bowling stats by batting hand
+- Schema migration for existing databases — new columns added automatically on startup
+- Fixed `BOWLING_WICKET_KINDS` not interpolating in SQL template literals (affected all wicket-counting queries)
 
 ### v0.2.0
 - Consolidated similar tools (28 → 25): `get_matchup` replaces separate batter-vs-bowler / bowler-vs-batter tools, `get_player_stats` replaces separate batting / bowling stats tools
