@@ -3,7 +3,11 @@ import { DuckDBConnection } from "@duckdb/node-api";
 const CREATE_TABLES = `
 CREATE TABLE IF NOT EXISTS players (
   player_id       VARCHAR PRIMARY KEY,
-  player_name     VARCHAR NOT NULL
+  player_name     VARCHAR NOT NULL,
+  batting_style   VARCHAR,
+  bowling_style   VARCHAR,
+  playing_role    VARCHAR,
+  country         VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS matches (
@@ -89,12 +93,36 @@ CREATE INDEX IF NOT EXISTS idx_matches_venue ON matches(venue);
 CREATE INDEX IF NOT EXISTS idx_matches_event ON matches(event_name);
 CREATE INDEX IF NOT EXISTS idx_matches_season ON matches(season);
 CREATE INDEX IF NOT EXISTS idx_players_name ON players(player_name);
+CREATE INDEX IF NOT EXISTS idx_players_batting_style ON players(batting_style);
+CREATE INDEX IF NOT EXISTS idx_players_bowling_style ON players(bowling_style);
 `;
 
 export async function createSchema(conn: DuckDBConnection): Promise<void> {
   const statements = CREATE_TABLES.split(";").filter((s) => s.trim());
   for (const stmt of statements) {
     await conn.run(stmt);
+  }
+}
+
+export async function migrateSchema(conn: DuckDBConnection): Promise<void> {
+  const result = await conn.runAndReadAll(
+    `SELECT column_name FROM information_schema.columns WHERE table_name = 'players'`
+  );
+  const existingCols = new Set(
+    result.getRowObjectsJson().map((r) => r.column_name as string)
+  );
+
+  const newColumns = [
+    { name: "batting_style", type: "VARCHAR" },
+    { name: "bowling_style", type: "VARCHAR" },
+    { name: "playing_role", type: "VARCHAR" },
+    { name: "country", type: "VARCHAR" },
+  ];
+
+  for (const col of newColumns) {
+    if (!existingCols.has(col.name)) {
+      await conn.run(`ALTER TABLE players ADD COLUMN ${col.name} ${col.type}`);
+    }
   }
 }
 

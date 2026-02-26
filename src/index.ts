@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { runIngest, runUpdate } from "./ingest/pipeline.js";
+import { runEnrichment } from "./ingest/enrichment.js";
 import { startServer } from "./server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -52,6 +53,20 @@ program
     await runUpdate({
       days: days as 2 | 7 | 30,
       dataDir: options.dataDir,
+      dbPath: options.db,
+    });
+  });
+
+program
+  .command("enrich")
+  .description(
+    "Enrich player table with metadata (batting style, bowling style, playing role, country) from a CSV"
+  )
+  .requiredOption("--csv <path>", "Path to CSV with player metadata")
+  .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
+  .action(async (options) => {
+    await runEnrichment({
+      csvPath: options.csv,
       dbPath: options.db,
     });
   });

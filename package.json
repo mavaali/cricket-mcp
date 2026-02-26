@@ -11,7 +11,8 @@
     "dev": "tsx src/index.ts",
     "ingest": "tsx src/index.ts ingest",
     "serve": "tsx src/index.ts serve",
-    "update": "tsx src/index.ts update"
+    "update": "tsx src/index.ts update",
+    "enrich": "tsx src/index.ts enrich"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

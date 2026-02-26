@@ -26,6 +26,7 @@ import { registerDismissalAnalysis } from "./dismissal-analysis.js";
 import { registerSeasonStats } from "./season-stats.js";
 import { registerPlayerComparison } from "./player-comparison.js";
 import { registerInningsProgression } from "./innings-progression.js";
+import { registerStyleMatchup } from "./style-matchup.js";
 
 export function registerAllTools(
   server: McpServer,
@@ -57,4 +58,5 @@ export function registerAllTools(
   registerSeasonStats(server, db);
   registerPlayerComparison(server, db);
   registerInningsProgression(server, db);
+  registerStyleMatchup(server, db);
 }

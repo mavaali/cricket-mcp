@@ -180,6 +180,10 @@ export interface DeliveryRow {
 export interface PlayerRow {
   player_id: string;
   player_name: string;
+  batting_style?: string | null;
+  bowling_style?: string | null;
+  playing_role?: string | null;
+  country?: string | null;
 }
 
 export interface ParsedMatch {

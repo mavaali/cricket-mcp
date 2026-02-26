@@ -1,6 +1,6 @@
 import path from "node:path";
 import { getConnection, closeConnection } from "../db/connection.js";
-import { createSchema, createIndexes } from "../db/schema.js";
+import { createSchema, createIndexes, migrateSchema } from "../db/schema.js";
 import { downloadAndExtract, downloadRecentZip } from "./downloader.js";
 import { parseMatchFile } from "./parser.js";
 import { loadBatch, seedInsertedPlayers } from "./loader.js";
@@ -27,6 +27,7 @@ export async function runIngest(options: {
   // Step 2: Open DB and create schema
   const conn = await getConnection(dbPath);
   await createSchema(conn);
+  await migrateSchema(conn);
 
   // Step 3: Parse and load in batches
   const BATCH_SIZE = 500;
@@ -118,6 +119,7 @@ export async function runUpdate(options: {
   // Step 2: Open DB, get existing match IDs
   const conn = await getConnection(dbPath);
   await createSchema(conn); // idempotent — safe as fallback
+  await migrateSchema(conn);
 
   const existingResult = await conn.runAndReadAll(
     "SELECT match_id FROM matches"
