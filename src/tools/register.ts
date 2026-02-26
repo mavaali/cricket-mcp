@@ -23,6 +23,11 @@ import { registerMilestoneTracker } from "./milestone-tracker.js";
 import { registerDisciplineStats } from "./discipline-stats.js";
 import { registerEmergingPlayers } from "./emerging-players.js";
 import { registerWhatIf } from "./what-if.js";
+import { registerFieldingStats } from "./fielding-stats.js";
+import { registerDismissalAnalysis } from "./dismissal-analysis.js";
+import { registerSeasonStats } from "./season-stats.js";
+import { registerPlayerComparison } from "./player-comparison.js";
+import { registerInningsProgression } from "./innings-progression.js";
 
 export function registerAllTools(
   server: McpServer,
@@ -51,4 +56,9 @@ export function registerAllTools(
   registerDisciplineStats(server, db);
   registerEmergingPlayers(server, db);
   registerWhatIf(server, db);
+  registerFieldingStats(server, db);
+  registerDismissalAnalysis(server, db);
+  registerSeasonStats(server, db);
+  registerPlayerComparison(server, db);
+  registerInningsProgression(server, db);
 }
