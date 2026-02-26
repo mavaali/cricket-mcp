@@ -229,6 +229,19 @@ Four tables in a star schema:
 - **Maidens** computed at the over level
 - **Test innings** — chasing means 4th innings, setting means 1st innings
 
+## Changelog
+
+### Unreleased
+- Consolidated similar tools (28 → 25): `get_matchup` replaces separate batter-vs-bowler / bowler-vs-batter tools, `get_player_stats` replaces separate batting / bowling stats tools
+- Added 5 new tools: fielding stats, dismissal analysis, season stats, player comparison, innings progression
+- Extracted shared constants (`BOWLING_WICKET_KINDS`, `PHASE_OVERS`) to reduce duplication
+
+### v0.1.0
+- 23 tools covering player stats, matchups, records, phase/situational analysis, team form, tournaments, milestones, emerging players, what-if scenarios
+- Incremental data updates (`npm run update`) using Cricsheet's recent match feeds
+- Full ingest pipeline: download → parse → load into DuckDB
+- 19 evals
+
 ## Data source
 
 All data comes from [Cricsheet](https://cricsheet.org), which provides free, open cricket data. Massive thanks to them for making this possible.
