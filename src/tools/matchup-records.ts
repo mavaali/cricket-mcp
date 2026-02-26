@@ -89,7 +89,7 @@ export function registerMatchupRecords(
           content: [
             {
               type: "text" as const,
-              text: "Error: Provide exactly one of batter_name or bowler_name, not both. Use get_batter_vs_bowler for a specific matchup.",
+              text: "Error: Provide exactly one of batter_name or bowler_name, not both. Use get_matchup for a specific matchup.",
             },
           ],
         };

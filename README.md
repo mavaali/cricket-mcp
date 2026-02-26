@@ -20,14 +20,13 @@ Ask Claude things like:
 - *"Which batters are improving this season?"*
 - *"Break down Rohit Sharma's record against each of England's bowlers"*
 
-## Tools (23 total)
+## Tools (25 total)
 
 ### Player Stats
 | Tool | What it does |
 |------|-------------|
 | `search_players` | Fuzzy name search with career summary |
-| `get_player_batting_stats` | Full batting stats — avg, SR, 100s, 50s, HS, 4s, 6s, ducks |
-| `get_player_bowling_stats` | Full bowling stats — avg, econ, SR, maidens, 5wi, best figures |
+| `get_player_stats` | Full batting or bowling stats (use `perspective` param) — avg, SR, 100s, 50s, HS, 4s, 6s, maidens, 5wi, best figures |
 
 ### Match & Team Queries
 | Tool | What it does |
@@ -51,8 +50,7 @@ Ask Claude things like:
 ### Batter vs Bowler Matchups
 | Tool | What it does |
 |------|-------------|
-| `get_batter_vs_bowler` | Batter's record against a specific bowler |
-| `get_bowler_vs_batter` | Bowler's record against a specific batter |
+| `get_matchup` | Head-to-head stats between a specific batter and bowler (use `perspective` for sort order) |
 | `get_batter_vs_team_bowling` | Batter vs each bowler in an opposition team |
 | `get_matchup_records` | Leaderboards — who dismisses X the most? Who scores most off Y? |
 
@@ -76,6 +74,19 @@ Ask Claude things like:
 | `get_milestone_tracker` | Players near career milestones (10000 runs, 500 wickets, etc.) |
 | `get_emerging_players` | Players whose recent stats significantly outperform career baseline |
 | `get_what_if` | Counterfactual — recalculate career stats excluding opponents, bowlers, venues, or tournaments |
+| `get_season_stats` | Year-by-year career breakdown |
+| `get_player_comparison` | Side-by-side comparison of two players |
+
+### Fielding & Dismissals
+| Tool | What it does |
+|------|-------------|
+| `get_fielding_stats` | Catches, stumpings, run outs per fielder |
+| `get_dismissal_analysis` | Breakdown of how a player gets out (or gets batters out) |
+
+### Innings Analysis
+| Tool | What it does |
+|------|-------------|
+| `get_innings_progression` | Over-by-over scoring progression for a match innings |
 
 Every tool supports filters: **format** (Test/ODI/T20/IT20), **gender**, **team**, **opposition**, **venue**, **city**, **season**, **tournament**, and **date range**.
 
@@ -156,7 +167,7 @@ That's it. Start asking cricket questions.
 
 ### "How does Kohli fare against Hazlewood in ODIs?"
 
-Uses `get_batter_vs_bowler` with `batter_name: "Kohli"`, `bowler_name: "Hazlewood"`, `match_type: "ODI"`.
+Uses `get_matchup` with `batter_name: "Kohli"`, `bowler_name: "Hazlewood"`, `match_type: "ODI"`.
 
 ### "Best death bowlers in IPL"
 
@@ -198,7 +209,7 @@ Uses `get_discipline_stats` with `perspective: "bowling"`, `phase: "death"`, `ev
 
 1. **Data**: [Cricsheet](https://cricsheet.org) provides free, open ball-by-ball data for every international and major domestic cricket match in JSON format.
 2. **Storage**: The `ingest` command downloads, parses, and loads this into a local [DuckDB](https://duckdb.org) database — a columnar analytics engine that eats aggregation queries for breakfast.
-3. **Server**: The MCP server exposes 23 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
+3. **Server**: The MCP server exposes 25 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
 
 ### Database schema
 
