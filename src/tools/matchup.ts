@@ -5,39 +5,51 @@ import { runQuery } from "../queries/run.js";
 import { MatchFilterSchema } from "../queries/common.js";
 import { buildMatchupQuery } from "../queries/matchup.js";
 
-export function registerBowlerVsBatter(
+export function registerMatchup(
   server: McpServer,
   db: DuckDBConnection
 ): void {
   server.registerTool(
-    "get_bowler_vs_batter",
+    "get_matchup",
     {
-      title: "Bowler vs Batter Matchup",
+      title: "Batter vs Bowler Matchup",
       description:
-        "Get a bowler's record against a specific batter. Returns balls bowled, runs conceded, wickets, average, economy, strike rate, dot ball %, boundaries conceded, and dismissal types. Bowler's perspective.",
+        "Head-to-head stats between a specific batter and bowler. Returns balls faced, runs scored, dismissals, average, strike rate, economy, dot ball %, boundary %, and dismissal types. Use 'perspective' to control sort order: 'batting' sorts by runs scored, 'bowling' by dismissals.",
       inputSchema: {
-        bowler_name: z
-          .string()
-          .min(2)
-          .describe("Bowler name (partial match, case-insensitive)."),
         batter_name: z
           .string()
           .min(2)
           .describe("Batter name (partial match, case-insensitive)."),
+        bowler_name: z
+          .string()
+          .min(2)
+          .describe("Bowler name (partial match, case-insensitive)."),
+        perspective: z
+          .enum(["batting", "bowling"])
+          .default("batting")
+          .describe(
+            "Sort perspective: 'batting' orders by runs scored (batter's view), 'bowling' orders by dismissals then economy (bowler's view)."
+          ),
         ...MatchFilterSchema.shape,
       },
     },
     async (args) => {
-      const { bowler_name, batter_name, ...filters } = args;
+      const { batter_name, bowler_name, perspective, ...filters } = args;
+
+      const orderBy =
+        perspective === "bowling"
+          ? "dismissals DESC, runs_conceded ASC"
+          : "runs_scored DESC";
+
       const { sql, params } = buildMatchupQuery({
         filters,
         extraWhere: [
-          "d.bowler ILIKE '%' || $bowler_name || '%'",
           "d.batter ILIKE '%' || $batter_name || '%'",
+          "d.bowler ILIKE '%' || $bowler_name || '%'",
         ],
-        extraParams: { bowler_name, batter_name },
+        extraParams: { batter_name, bowler_name },
         groupBy: "both",
-        orderBy: "dismissals DESC, runs_conceded ASC",
+        orderBy,
         limit: 10,
       });
 
@@ -48,7 +60,7 @@ export function registerBowlerVsBatter(
           content: [
             {
               type: "text" as const,
-              text: `No matchup data found for bowler "${bowler_name}" vs batter "${batter_name}" with the given filters.`,
+              text: `No matchup data found for "${batter_name}" vs "${bowler_name}" with the given filters.`,
             },
           ],
         };
