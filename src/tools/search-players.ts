@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
+import { BOWLING_WICKET_KINDS } from "../queries/common.js";
 
 export function registerSearchPlayers(
   server: McpServer,
@@ -35,8 +36,7 @@ export function registerSearchPlayers(
           COUNT(DISTINCT d_bat.match_id) AS matches_batted,
           COALESCE(SUM(d_bat.runs_batter), 0) AS total_runs,
           COUNT(DISTINCT d_bowl.match_id) AS matches_bowled,
-          COUNT(*) FILTER (WHERE d_bowl.is_wicket AND d_bowl.wicket_kind IN
-            ('bowled', 'caught', 'caught and bowled', 'lbw', 'stumped', 'hit wicket')) AS total_wickets
+          COUNT(*) FILTER (WHERE d_bowl.is_wicket AND d_bowl.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS total_wickets
         FROM players p
         LEFT JOIN deliveries d_bat ON p.player_id = d_bat.batter_id
         LEFT JOIN deliveries d_bowl ON p.player_id = d_bowl.bowler_id
@@ -44,8 +44,7 @@ export function registerSearchPlayers(
         GROUP BY p.player_id, p.player_name
         ORDER BY
           COALESCE(SUM(d_bat.runs_batter), 0) +
-          COUNT(*) FILTER (WHERE d_bowl.is_wicket AND d_bowl.wicket_kind IN
-            ('bowled','caught','caught and bowled','lbw','stumped','hit wicket')) * 25
+          COUNT(*) FILTER (WHERE d_bowl.is_wicket AND d_bowl.wicket_kind IN \${BOWLING_WICKET_KINDS}) * 25
           DESC
         LIMIT $limit
       `;

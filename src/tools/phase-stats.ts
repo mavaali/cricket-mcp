@@ -6,13 +6,10 @@ import {
   MatchFilterSchema,
   buildMatchFilter,
   buildWhereString,
+  PHASE_OVERS,
+  BOWLING_WICKET_KINDS,
 } from "../queries/common.js";
 
-const PHASE_OVERS: Record<string, [number, number]> = {
-  powerplay: [0, 5],   // over_number 0-5 = overs 1-6
-  middle: [6, 14],     // over_number 6-14 = overs 7-15
-  death: [15, 19],     // over_number 15-19 = overs 16-20
-};
 
 export function registerPhaseStats(
   server: McpServer,
@@ -187,8 +184,7 @@ export function registerPhaseStats(
               d.innings_number,
               COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
               SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN
-                ('bowled', 'caught', 'caught and bowled', 'lbw', 'stumped', 'hit wicket')) AS wickets,
+              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS wickets,
               COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dots,
               COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours_conceded,
               COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes_conceded
