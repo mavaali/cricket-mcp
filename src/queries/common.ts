@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+/** Bowling dismissal types — wicket_kind values that count as bowling wickets (excludes run outs) */
+export const BOWLING_WICKET_KINDS = `('bowled', 'caught', 'caught and bowled', 'lbw', 'stumped', 'hit wicket')`;
+
+/** T20 match phase boundaries (over_number values, 0-indexed) */
+export const PHASE_OVERS: Record<string, [number, number]> = {
+  powerplay: [0, 5],   // overs 1-6
+  middle: [6, 14],     // overs 7-15
+  death: [15, 19],     // overs 16-20
+};
+
+export type CricketPhase = keyof typeof PHASE_OVERS;
+
 export const MatchFilterSchema = z.object({
   match_type: z
     .string()

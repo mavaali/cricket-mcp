@@ -6,13 +6,9 @@ import {
   MatchFilterSchema,
   buildMatchFilter,
   buildWhereString,
+  PHASE_OVERS,
 } from "../queries/common.js";
 
-const PHASE_OVERS: Record<string, [number, number]> = {
-  powerplay: [0, 5],
-  middle: [6, 14],
-  death: [15, 19],
-};
 
 export function registerDisciplineStats(
   server: McpServer,
@@ -81,7 +77,9 @@ export function registerDisciplineStats(
 
       if (phase) {
         const [from, to] = PHASE_OVERS[phase];
-        whereClauses.push(`d.over_number >= ${from} AND d.over_number <= ${to}`);
+        params.phase_from = from;
+        params.phase_to = to;
+        whereClauses.push("d.over_number >= $phase_from AND d.over_number <= $phase_to");
       }
 
       if (player_name) {

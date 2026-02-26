@@ -1,4 +1,4 @@
-import { type MatchFilter, buildMatchFilter, buildWhereString } from "./common.js";
+import { type MatchFilter, buildMatchFilter, buildWhereString, BOWLING_WICKET_KINDS } from "./common.js";
 
 /**
  * Core matchup aggregation query. Groups deliveries by (batter, bowler) pair
@@ -70,14 +70,12 @@ export function buildMatchupQuery(options: {
         COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls_faced,
         SUM(d.runs_batter) AS runs_scored,
         SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-        COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter AND d.wicket_kind IN
-          ('bowled', 'caught', 'caught and bowled', 'lbw', 'stumped', 'hit wicket')) AS dismissals,
+        COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS dismissals,
         COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0) AS dot_balls,
         COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours,
         COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes,
         -- Dismissal type breakdown as JSON
-        LIST(d.wicket_kind) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter AND d.wicket_kind IN
-          ('bowled', 'caught', 'caught and bowled', 'lbw', 'stumped', 'hit wicket')) AS dismissal_kinds
+        LIST(d.wicket_kind) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS dismissal_kinds
       FROM matchup_deliveries d
       GROUP BY ${groupCols}
     )

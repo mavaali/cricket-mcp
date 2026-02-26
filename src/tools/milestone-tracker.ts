@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
+import { BOWLING_WICKET_KINDS } from "../queries/common.js";
 
 export function registerMilestoneTracker(
   server: McpServer,
@@ -126,8 +127,7 @@ export function registerMilestoneTracker(
                 d.bowler_id AS player_id,
                 d.match_id,
                 d.innings_number,
-                COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN
-                  ('bowled', 'caught', 'caught and bowled', 'lbw', 'stumped', 'hit wicket')) AS wickets
+                COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN \${BOWLING_WICKET_KINDS}) AS wickets
               FROM deliveries d
               JOIN matches m ON d.match_id = m.match_id
               WHERE 1=1 ${matchTypeFilter} ${genderFilter}
