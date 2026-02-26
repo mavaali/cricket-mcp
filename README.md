@@ -231,7 +231,7 @@ Four tables in a star schema:
 
 ## Changelog
 
-### Unreleased
+### v0.2.0
 - Consolidated similar tools (28 → 25): `get_matchup` replaces separate batter-vs-bowler / bowler-vs-batter tools, `get_player_stats` replaces separate batting / bowling stats tools
 - Added 5 new tools: fielding stats, dismissal analysis, season stats, player comparison, innings progression
 - Extracted shared constants (`BOWLING_WICKET_KINDS`, `PHASE_OVERS`) to reduce duplication
