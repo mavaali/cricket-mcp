@@ -5,7 +5,7 @@ import { runQuery } from "../queries/run.js";
 
 export function registerInningsProgression(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_innings_progression",

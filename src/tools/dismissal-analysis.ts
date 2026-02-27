@@ -11,7 +11,7 @@ import {
 
 export function registerDismissalAnalysis(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_dismissal_analysis",

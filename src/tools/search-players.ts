@@ -6,7 +6,7 @@ import { BOWLING_WICKET_KINDS } from "../queries/common.js";
 
 export function registerSearchPlayers(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "search_players",

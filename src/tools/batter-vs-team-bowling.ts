@@ -7,7 +7,7 @@ import { buildMatchupQuery } from "../queries/matchup.js";
 
 export function registerBatterVsTeamBowling(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_batter_vs_team_bowling",

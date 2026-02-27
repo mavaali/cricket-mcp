@@ -7,7 +7,7 @@ import { buildBowlingRecordsQuery } from "../queries/bowling.js";
 
 export function registerBowlingRecords(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_bowling_records",

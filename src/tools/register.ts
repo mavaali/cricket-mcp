@@ -30,7 +30,7 @@ import { registerStyleMatchup } from "./style-matchup.js";
 
 export function registerAllTools(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   registerSearchPlayers(server, db);
   registerPlayerStats(server, db);

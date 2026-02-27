@@ -6,7 +6,7 @@ import { MatchFilterSchema, buildMatchFilter, buildWhereString } from "../querie
 
 export function registerSearchMatches(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "search_matches",

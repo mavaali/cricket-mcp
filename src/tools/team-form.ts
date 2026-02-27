@@ -10,7 +10,7 @@ import {
 
 export function registerTeamForm(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_team_form",
