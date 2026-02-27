@@ -2,6 +2,8 @@ import { DuckDBInstance, DuckDBConnection } from "@duckdb/node-api";
 import path from "node:path";
 import fs from "node:fs";
 
+export type { OneLakeConfig } from "../backends/onelake.js";
+
 let instance: DuckDBInstance | null = null;
 let connection: DuckDBConnection | null = null;
 

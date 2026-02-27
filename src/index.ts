@@ -75,8 +75,31 @@ program
   .command("serve")
   .description("Start the MCP server (stdio transport)")
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
+  .option(
+    "--backend <type>",
+    "Backend: 'local' (default, DuckDB file) or 'onelake' (read Delta tables from Fabric)",
+    "local"
+  )
+  .option("--workspace-id <id>", "Fabric workspace ID (required for onelake backend)")
+  .option("--lakehouse-id <id>", "Fabric lakehouse ID (required for onelake backend)")
   .action(async (options) => {
-    await startServer(options.db);
+    if (options.backend === "onelake") {
+      if (!options.workspaceId || !options.lakehouseId) {
+        console.error(
+          "Error: --workspace-id and --lakehouse-id are required for onelake backend"
+        );
+        process.exit(1);
+      }
+      await startServer({
+        backend: "onelake",
+        onelake: {
+          workspaceId: options.workspaceId,
+          lakehouseId: options.lakehouseId,
+        },
+      });
+    } else {
+      await startServer(options.db);
+    }
   });
 
 program.parse();
