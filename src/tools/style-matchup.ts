@@ -14,11 +14,12 @@ export function registerStyleMatchup(
     {
       title: "Style-Based Matchup",
       description:
-        "Analyze a player's performance broken down by bowling style or batting hand. " +
+        "Analyze a player's performance broken down by bowling style or batting hand, optionally within a specific match phase. " +
         "For batters: stats against pace vs spin, or left-arm pace vs right-arm offbreak, etc. " +
         "For bowlers: stats against right-hand vs left-hand batters. " +
+        "Supports phase filtering to combine style and phase dimensions (e.g. 'Bumrah vs left-handers at the death'). " +
         "Requires enriched player data (run 'npm run enrich' first). " +
-        "Use for 'Kohli vs left-arm pace', 'Bumrah against left-handers', 'How does Smith bat against spin?'",
+        "Use for 'Kohli vs left-arm pace', 'Bumrah against left-handers in the powerplay', 'How does Smith bat against spin at the death?'",
       inputSchema: {
         player_name: z
           .string()
@@ -38,6 +39,13 @@ export function registerStyleMatchup(
               '"arm": Left-arm Pace / Right-arm Pace / Left-arm Spin / Right-arm Spin. ' +
               '"raw": exact style strings (e.g. "Right-arm fast-medium"). ' +
               "Ignored for bowling perspective (batting styles are always shown as-is)."
+          ),
+        phase: z
+          .enum(["powerplay", "middle", "death"])
+          .optional()
+          .describe(
+            "Optional match phase filter: powerplay (overs 1-6), middle (7-15), death (16-20). " +
+              "When set, results are scoped to that phase's overs."
           ),
         min_balls: z
           .number()
@@ -60,6 +68,7 @@ export function registerStyleMatchup(
         player_name,
         perspective,
         grouping,
+        phase,
         min_balls,
         limit,
         ...filters
@@ -91,6 +100,7 @@ export function registerStyleMatchup(
         filters,
         minBalls: min_balls,
         limit,
+        phase,
       });
 
       const rows = await runQuery(db, sql, params);
