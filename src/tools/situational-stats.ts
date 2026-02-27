@@ -10,7 +10,7 @@ import {
 
 export function registerSituationalStats(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_situational_stats",

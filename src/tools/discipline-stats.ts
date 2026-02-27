@@ -12,7 +12,7 @@ import {
 
 export function registerDisciplineStats(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_discipline_stats",

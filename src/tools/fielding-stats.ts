@@ -10,7 +10,7 @@ import {
 
 export function registerFieldingStats(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_fielding_stats",

@@ -7,7 +7,7 @@ import { buildStyleMatchupQuery } from "../queries/style-matchup.js";
 
 export function registerStyleMatchup(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_style_matchup",

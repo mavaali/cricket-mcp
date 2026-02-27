@@ -7,7 +7,7 @@ import { buildMatchupQuery } from "../queries/matchup.js";
 
 export function registerMatchupRecords(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_matchup_records",

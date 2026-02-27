@@ -10,7 +10,7 @@ import {
 
 export function registerTossAnalysis(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_toss_analysis",

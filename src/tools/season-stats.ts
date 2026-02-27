@@ -11,7 +11,7 @@ import {
 
 export function registerSeasonStats(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_season_stats",

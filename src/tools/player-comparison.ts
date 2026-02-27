@@ -11,7 +11,7 @@ import {
 
 export function registerPlayerComparison(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_player_comparison",

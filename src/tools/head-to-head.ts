@@ -6,7 +6,7 @@ import { MatchFilterSchema, buildMatchFilter, buildWhereString } from "../querie
 
 export function registerHeadToHead(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_head_to_head",

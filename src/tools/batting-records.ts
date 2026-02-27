@@ -7,7 +7,7 @@ import { buildBattingRecordsQuery } from "../queries/batting.js";
 
 export function registerBattingRecords(
   server: McpServer,
-  db: DuckDBConnection
+  db: Promise<DuckDBConnection>
 ): void {
   server.registerTool(
     "get_batting_records",
