@@ -176,6 +176,70 @@ Replace `/path/to/cricket-mcp` with the actual path. Restart Claude Desktop.
 
 That's it. Start asking cricket questions.
 
+### Connect to VS Code (Copilot)
+
+Add to `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "cricket-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "tsx", "/path/to/cricket-mcp/src/index.ts", "serve"]
+    }
+  }
+}
+```
+
+The `-y` flag prevents npx from prompting for install confirmation, which would hang the MCP stdio transport.
+
+### OneLake backend (Microsoft Fabric)
+
+Instead of a local DuckDB file, cricket-mcp can read Delta tables directly from a Fabric lakehouse via OneLake. All 26 tools work unchanged — DuckDB's `delta` and `azure` extensions handle the reads.
+
+**Prerequisites:**
+- Azure CLI installed and logged in (`az login`)
+- A Fabric lakehouse with the cricket tables (players, matches, innings, deliveries) as Delta tables
+- Workspace ID and Lakehouse ID from the Fabric portal
+
+**CLI usage:**
+
+```bash
+npx tsx src/index.ts serve --backend onelake \
+  --workspace-id <WORKSPACE_ID> \
+  --lakehouse-id <LAKEHOUSE_ID>
+```
+
+**VS Code mcp.json:**
+
+```json
+{
+  "servers": {
+    "cricket-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y", "tsx", "/path/to/cricket-mcp/src/index.ts",
+        "serve", "--backend", "onelake",
+        "--workspace-id", "${env:FABRIC_WORKSPACE_ID}",
+        "--lakehouse-id", "${env:FABRIC_LAKEHOUSE_ID}"
+      ],
+      "env": {
+        "FABRIC_WORKSPACE_ID": "<your-workspace-id>",
+        "FABRIC_LAKEHOUSE_ID": "<your-lakehouse-id>"
+      }
+    }
+  }
+}
+```
+
+> **Note:** The `env` block is important — VS Code may not inherit shell environment variables (e.g., from `.zshrc`) if launched from the Dock or Spotlight. Setting them explicitly in the config ensures they're always available.
+
+**How it works:** On startup, cricket-mcp creates an in-memory DuckDB instance, loads the `delta` and `azure` extensions, authenticates via Azure CLI, and creates views over each Delta table in OneLake. The MCP transport connects immediately while the database initializes in the background — the first tool call waits for initialization to complete, subsequent calls resolve instantly.
+
+See [cricket-data-factory](https://github.com/mavaali/cricket-data-factory) for the full pipeline that loads Cricsheet data into a Fabric lakehouse.
+
 ## Example Queries
 
 ### "How does Kohli fare against Hazlewood in ODIs?"
@@ -251,6 +315,11 @@ Four tables in a star schema:
 - **Test innings** — chasing means 4th innings, setting means 1st innings
 
 ## Changelog
+
+### v0.4.0
+- **OneLake backend**: read Delta tables directly from a Microsoft Fabric lakehouse via DuckDB's `delta` + `azure` extensions (`--backend onelake`)
+- **Lazy connection initialization**: MCP transport connects immediately; database setup runs in the background. Fixes VS Code MCP client timeouts when OneLake extensions take time to load.
+- VS Code `.vscode/mcp.json` configuration documented
 
 ### v0.3.0
 - Player enrichment pipeline: `npm run enrich` loads batting/bowling style metadata from bundled CSV (16K players from cricketdata R package)
