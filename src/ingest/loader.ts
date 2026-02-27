@@ -43,7 +43,7 @@ export async function loadBatch(
     if (insertedPlayers.has(p.player_id)) continue;
     insertedPlayers.add(p.player_id);
     await conn.run(
-      "INSERT INTO players VALUES ($1, $2)",
+      "INSERT INTO players (player_id, player_name) VALUES ($1, $2)",
       [p.player_id, p.player_name]
     );
   }
