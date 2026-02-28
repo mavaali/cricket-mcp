@@ -20,7 +20,7 @@ Ask Claude things like:
 - *"Which batters are improving this season?"*
 - *"Break down Rohit Sharma's record against each of England's bowlers"*
 
-## Tools (26 total)
+## Tools (25 total)
 
 ### Player Stats
 | Tool | What it does |
@@ -50,9 +50,7 @@ Ask Claude things like:
 ### Batter vs Bowler Matchups
 | Tool | What it does |
 |------|-------------|
-| `get_matchup` | Head-to-head stats between a specific batter and bowler (use `perspective` for sort order) |
-| `get_batter_vs_team_bowling` | Batter vs each bowler in an opposition team |
-| `get_matchup_records` | Leaderboards — who dismisses X the most? Who scores most off Y? |
+| `get_matchup` | Head-to-head stats (both names), batter vs team bowling (batter + opposition), or matchup leaderboards (one name + record_type) |
 | `get_style_matchup` | Batter vs bowling styles (pace/spin, left-arm/right-arm) or bowler vs batting hand |
 
 ### Phase & Situation Analysis
@@ -294,7 +292,7 @@ Uses `get_discipline_stats` with `perspective: "bowling"`, `phase: "death"`, `ev
 
 1. **Data**: [Cricsheet](https://cricsheet.org) provides free, open ball-by-ball data for every international and major domestic cricket match in JSON format.
 2. **Storage**: The `ingest` command downloads, parses, and loads this into a local [DuckDB](https://duckdb.org) database — a columnar analytics engine that eats aggregation queries for breakfast.
-3. **Server**: The MCP server exposes 26 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
+3. **Server**: The MCP server exposes 25 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
 
 ### Database schema
 
@@ -314,7 +312,41 @@ Four tables in a star schema:
 - **Maidens** computed at the over level
 - **Test innings** — chasing means 4th innings, setting means 1st innings
 
+## Data Coverage & Limitations
+
+All statistics are derived from [Cricsheet](https://cricsheet.org) ball-by-ball data. Cricsheet is an open-source project that provides detailed delivery-level records — but it doesn't cover the full history of cricket. Think of it as a high-resolution camera that was installed partway through the movie.
+
+### Coverage windows
+
+| Format | Earliest match in dataset | Notes |
+|--------|--------------------------|-------|
+| **Tests** | ~Dec 2001 | Covers the 2001/02 season onwards. Players whose careers were primarily pre-2002 (Bradman, Gavaskar, Border, etc.) will be absent or severely underrepresented. |
+| **ODIs** | ~Jun 2002 | Includes the 2003 World Cup onwards. The first ~30 years of ODI cricket (1971-2002) are not covered — no Kapil Dev 175, no 1996 World Cup. |
+| **T20Is** | ~Feb 2005 | Near-complete from the format's inception (first T20I was Feb 2005). |
+| **T20 (domestic)** | ~Apr 2008 | IPL Season 1 onwards. Also includes BBL, CPL, PSL, SA20, and other domestic T20 leagues where Cricsheet has coverage. |
+
+Data is updated regularly and includes matches through early 2026 at time of writing.
+
+### What this means in practice
+
+- **Career stats for active or recent players** (Smith, Kohli, Root, Bumrah, etc.) are comprehensive and reliable.
+- **Career stats for players who debuted before ~2002** will only reflect the tail end of their careers. Tendulkar's numbers here, for example, cover roughly his last 12 years, not all 24.
+- **All-time leaderboards** are effectively "21st century leaderboards." They should not be compared to official ICC career records, which span the full history of the game.
+- **Venue and head-to-head records** only reflect matches within the coverage window, not the full historical record at a ground or between two teams.
+
+### What's not limited
+
+Within the coverage window, the data is ball-by-ball — every delivery, every run, every dismissal, every extra. Phase analysis, matchup breakdowns, strike rates, dot ball percentages, and other granular metrics are all derived from actual delivery data, not aggregated scorecards.
+
 ## Changelog
+
+### v0.5.0
+- Consolidated matchup tools (27 → 25): `get_matchup` now handles specific matchups, batter-vs-team breakdowns, and matchup leaderboards in one tool
+- Pre-computed `bowling_style_broad` and `bowling_style_arm` columns during enrichment — eliminates per-row CASE expressions at query time
+- Simplified `search_players` to a players-only query (no more JOIN on 10.9M deliveries)
+- Added composite indexes on deliveries for wicket and match queries
+- Sharpened all 25 tool descriptions with question-led format and cross-references for better LLM tool routing
+- Added data coverage documentation with format-specific date ranges
 
 ### v0.4.0
 - **OneLake backend**: read Delta tables directly from a Microsoft Fabric lakehouse via DuckDB's `delta` + `azure` extensions (`--backend onelake`)
