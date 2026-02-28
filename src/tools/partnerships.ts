@@ -13,7 +13,9 @@ export function registerPartnerships(
     {
       title: "Partnership Records",
       description:
-        "Get batting partnership records. Find the highest partnerships by runs, optionally filtered by player, format, team, venue, and more.",
+        "What are the biggest batting partnerships? Highest partnerships by total runs, showing both batters, runs, balls, venue, and match context. " +
+        "Use for 'Biggest opening stands in Tests', 'Kohli\\'s best partnerships in ODIs', or 'Highest stands in IPL 2024'. " +
+        "Not for individual batting records (use get_batting_records) or batter-vs-bowler matchups (use get_matchup).",
       inputSchema: {
         player_name: z
           .string()

@@ -17,7 +17,9 @@ export function registerTeamForm(
     {
       title: "Team Form",
       description:
-        "Team's recent form: last N match results, win/loss streak, average scores, run rate trends. Use for 'How has India been doing in T20s recently?' or 'Australia's form this year'.",
+        "How has this team been performing recently? Last N match results with win/loss streak, average scores, and run rate trends. " +
+        "Use for 'India\\'s recent form in T20s', 'Australia\\'s record this year', or 'How is RCB doing in IPL 2024?'. " +
+        "Not for all-time head-to-head records (use get_head_to_head) or tournament standings (use get_tournament_summary).",
       inputSchema: {
         team: z.string().describe("Team name (e.g., 'India', 'Australia'). Required."),
         match_type: MatchFilterSchema.shape.match_type,

@@ -15,7 +15,10 @@ export function registerPlayerStats(
     {
       title: "Player Statistics",
       description:
-        "Get aggregated career statistics for a cricket player. Use 'perspective' to choose batting or bowling stats. Batting returns: matches, innings, runs, average, strike rate, centuries, fifties, highest score, fours, sixes. Bowling returns: matches, innings, overs, wickets, average, economy, strike rate, best figures, maidens, five-wicket hauls. Supports filtering by format, opposition, venue, date range, season, and tournament.",
+        "What are this player\\'s career numbers? Aggregated batting or bowling stats: matches, innings, runs, average, strike rate, centuries, fifties, highest score, fours, sixes (batting); or overs, wickets, economy, best figures, five-wicket hauls (bowling). " +
+        "Use for 'Kohli\\'s Test batting stats', 'Bumrah\\'s ODI bowling record', or 'Ashwin\\'s wickets against England'. " +
+        "Supports filtering by format, opposition, venue, date range, season, and tournament. " +
+        "Not for comparing two players (use get_player_comparison), season-by-season breakdown (use get_season_stats), or batter-vs-bowler matchups (use get_matchup).",
       inputSchema: {
         player_name: z
           .string()

@@ -13,7 +13,9 @@ export function registerWhatIf(
     {
       title: "What If",
       description:
-        "Recalculate a player's career stats excluding specific opponents, bowlers, venues, or tournaments. Use for 'What would Kohli average without Hazlewood?' or 'Sachin's record excluding matches at Lord's'.",
+        "What would this player\\'s stats look like without X? Recalculates career stats after excluding specific opponents, bowlers, venues, or tournaments. Shows original vs modified stats with deltas. " +
+        "Use for 'Kohli\\'s average without Hazlewood', 'Sachin\\'s record excluding Lord\\'s', or 'Bumrah\\'s economy without IPL'. " +
+        "Not for general career stats (use get_player_stats) or head-to-head matchup data (use get_matchup).",
       inputSchema: {
         player_name: z
           .string()

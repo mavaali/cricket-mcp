@@ -13,7 +13,9 @@ export function registerTournamentSummary(
     {
       title: "Tournament Summary",
       description:
-        "Tournament/series overview: standings (win/loss record per team), top run scorers, top wicket takers, key stats. Use for 'IPL 2024 standings' or 'Top performers in 2023 World Cup'.",
+        "How did a tournament go? Who were the top performers? Tournament overview: team standings (wins/losses/win %), top run scorers, and top wicket takers. " +
+        "Use for 'IPL 2024 standings', 'Top performers in 2023 World Cup', or 'Who scored the most runs in the Ashes 2023?'. " +
+        "Not for a single team\\'s form (use get_team_form) or a single player\\'s career stats (use get_player_stats).",
       inputSchema: {
         event_name: z
           .string()

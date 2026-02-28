@@ -18,7 +18,10 @@ export function registerDismissalAnalysis(
     {
       title: "Dismissal Analysis",
       description:
-        "Dismissal type breakdown — how a batter gets out (caught, bowled, LBW, etc.) or how a bowler takes wickets. Use for 'How does Kohli get out?' or 'Bumrah's dismissal breakdown in T20s'.",
+        "How does this player get out / take wickets? Breakdown of dismissal types (caught, bowled, LBW, run out, stumped, etc.) with counts and percentages. " +
+        "Batting perspective shows how a batter is dismissed; bowling perspective shows how a bowler takes wickets. " +
+        "Use for 'How does Kohli get out?', 'Bumrah\\'s wicket types in T20s', or 'Does Warner get bowled a lot?'. " +
+        "Not for fielding stats (use get_fielding_stats) or specific batter-vs-bowler matchups (use get_matchup).",
       inputSchema: {
         player_name: z
           .string()

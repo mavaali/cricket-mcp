@@ -13,7 +13,9 @@ export function registerHeadToHead(
     {
       title: "Head to Head Record",
       description:
-        "Get the head-to-head record between two cricket teams. Returns wins, losses, draws, ties, and no results. Supports filtering by format, venue, date range, and tournament.",
+        "What is the win/loss record between two teams? Returns total matches, wins for each side, draws, ties, and no results. " +
+        "Use for 'India vs Australia Test record', 'England vs New Zealand in ODIs', or 'India vs Pakistan World Cup head-to-head'. " +
+        "Not for individual player matchups (use get_matchup) or recent form (use get_team_form).",
       inputSchema: {
         team1: z.string().describe("First team name (e.g., 'India', 'Australia')."),
         team2: z.string().describe("Second team name."),

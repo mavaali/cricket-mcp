@@ -13,7 +13,9 @@ export function registerVenueStats(
     {
       title: "Venue Statistics",
       description:
-        "Get statistics for cricket venues/grounds. Returns matches played, average first/second innings scores, highest and lowest totals, and win percentage batting first vs chasing. Filter by venue name, format, date range, etc.",
+        "What are the scoring patterns at this ground? Venue statistics: matches played, average first/second innings scores, highest and lowest totals, and bat-first win %. " +
+        "Use for 'Average score at Wankhede in T20s', 'Highest total at the MCG', or 'Is Eden Gardens high-scoring?'. " +
+        "Not for toss impact analysis (use get_toss_analysis) or player stats at a venue (use get_player_stats with venue filter).",
       inputSchema: {
         venue: z
           .string()

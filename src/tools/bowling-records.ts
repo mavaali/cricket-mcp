@@ -14,7 +14,9 @@ export function registerBowlingRecords(
     {
       title: "Bowling Records & Leaderboards",
       description:
-        "Get bowling leaderboards and records. Rank players by wickets, bowling average, economy rate, strike rate, or five-wicket hauls. Supports filtering by format, team, opposition, venue, date range, and tournament.",
+        "Who has the most wickets / best economy / best average? Bowling leaderboards ranking players by wickets, average, economy, strike rate, or five-wicket hauls. " +
+        "Use for 'Leading Test wicket-takers', 'Best economy in IPL', or 'Most five-wicket hauls in ODIs'. " +
+        "Not for a single player\\'s stats (use get_player_stats) or batting rankings (use get_batting_records).",
       inputSchema: {
         record_type: z
           .enum([

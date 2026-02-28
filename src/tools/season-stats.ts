@@ -18,7 +18,9 @@ export function registerSeasonStats(
     {
       title: "Season Stats",
       description:
-        "Season-by-season career breakdown. Shows stats per season for a player. Use for 'Kohli's Test average year by year' or 'Bumrah's IPL economy by season'.",
+        "How has this player performed year by year? Season-by-season career breakdown showing batting or bowling stats for each season. " +
+        "Use for 'Kohli\\'s Test average by year', 'Bumrah\\'s IPL economy each season', or 'Root\\'s batting trend over the last 5 years'. " +
+        "Not for a single aggregated career number (use get_player_stats) or comparing two players (use get_player_comparison).",
       inputSchema: {
         player_name: z
           .string()

@@ -17,7 +17,9 @@ export function registerTossAnalysis(
     {
       title: "Toss Analysis",
       description:
-        "Analyze toss impact on match outcomes. Win % batting first vs chasing, by venue, team, or format. Use for 'Should you bat first at Wankhede?' or 'Does the toss matter in T20s?'.",
+        "Does the toss matter at this venue / in this format? Toss impact on outcomes: win % batting first vs chasing, toss winner win %, and bat/field decision trends. " +
+        "Can group by venue, team, format, or season. Use for 'Should you bat first at Wankhede?', 'Does the toss matter in T20s?', or 'Toss trends in IPL 2024'. " +
+        "Not for venue scoring patterns (use get_venue_stats) or team win/loss records (use get_head_to_head).",
       inputSchema: {
         venue: MatchFilterSchema.shape.venue,
         team: MatchFilterSchema.shape.team,

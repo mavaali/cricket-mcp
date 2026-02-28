@@ -19,7 +19,9 @@ export function registerDisciplineStats(
     {
       title: "Discipline Stats",
       description:
-        "Bowling discipline: dot ball %, wide/no-ball rates, extras conceded, boundary % allowed. Batting discipline: dot ball % faced, boundary %. The 'boring stats that win tournaments' tool.",
+        "Who bowls the most dot balls / fewest wides / least boundaries? Discipline metrics: dot ball %, wide/no-ball rates, extras per over, boundary % allowed (bowling); dot ball % faced, boundary % (batting). " +
+        "Use for 'Most economical death bowlers in IPL', 'Which bowlers give the fewest extras?', or 'Batters with highest boundary % in T20s'. " +
+        "Not for standard bowling figures (use get_bowling_records) or phase-specific stats (use get_phase_stats).",
       inputSchema: {
         perspective: z
           .enum(["batting", "bowling"])

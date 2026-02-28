@@ -14,7 +14,9 @@ export function registerBattingRecords(
     {
       title: "Batting Records & Leaderboards",
       description:
-        "Get batting leaderboards and records. Rank players by runs, average, strike rate, centuries, fifties, sixes, fours, or highest score. Supports filtering by format, team, opposition, venue, date range, and tournament.",
+        "Who has the most runs / highest average / most centuries? Batting leaderboards ranking players by runs, average, strike rate, centuries, fifties, sixes, fours, or highest score. " +
+        "Use for 'All-time Test run scorers', 'Best T20I strike rates', or 'Most sixes in IPL 2024'. " +
+        "Not for a single player\\'s stats (use get_player_stats) or bowling rankings (use get_bowling_records).",
       inputSchema: {
         record_type: z
           .enum([

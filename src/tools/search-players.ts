@@ -12,7 +12,9 @@ export function registerSearchPlayers(
     {
       title: "Search Players",
       description:
-        "Search for cricket players by name. Returns matching player names and metadata (batting style, bowling style, role, country). Use this to find exact player names before querying detailed stats with get_player_stats.",
+        "Who is this player? Lookup players by name to get exact names, batting/bowling style, role, and country. " +
+        "Use for 'Find players named Sharma', 'What is Bumrah\\'s bowling style?', or 'Is there a player called Williamson?'. " +
+        "Always use this first when unsure of a player\\'s exact name. Not for stats -- use get_player_stats for career numbers.",
       inputSchema: {
         query: z
           .string()

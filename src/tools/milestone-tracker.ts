@@ -13,7 +13,9 @@ export function registerMilestoneTracker(
     {
       title: "Milestone Tracker",
       description:
-        "Find players near career milestones (10000 runs, 500 wickets, 100 centuries, etc.) or who recently reached them. Use for 'Who is close to 10000 ODI runs?' or 'Players near 500 Test wickets'.",
+        "Who is close to a career milestone? Find players approaching or who have reached landmarks like 10000 runs, 500 wickets, 100 centuries, etc. " +
+        "Use for 'Who is near 10000 ODI runs?', 'Players approaching 500 Test wickets', or 'Who just reached 50 Test centuries?'. " +
+        "Not for current career totals (use get_player_stats) or season-by-season progression (use get_season_stats).",
       inputSchema: {
         milestone_type: z
           .enum(["runs", "wickets", "matches", "centuries", "fifties", "five_wicket_hauls"])

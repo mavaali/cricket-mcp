@@ -17,7 +17,9 @@ export function registerFieldingStats(
     {
       title: "Fielding Statistics",
       description:
-        "Fielding statistics: catches, run outs, stumpings, total dismissals. Uses fielder data from ball-by-ball records. Use for 'Best fielders in IPL' or 'How many catches has Kohli taken in Tests?'",
+        "Who are the best fielders? How many catches has a player taken? Fielding stats from ball-by-ball data: catches, run outs, stumpings, total dismissals. " +
+        "Use for 'Best fielders in IPL', 'How many catches has Kohli taken in Tests?', or 'Most stumpings by a wicketkeeper in T20s'. " +
+        "Not for batting or bowling stats (use get_player_stats) or dismissal type breakdowns for a batter/bowler (use get_dismissal_analysis).",
       inputSchema: {
         player_name: z
           .string()

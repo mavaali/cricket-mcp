@@ -13,7 +13,10 @@ export function registerSearchMatches(
     {
       title: "Search Matches",
       description:
-        "Search for cricket matches with various filters. Returns match results including teams, venue, date, outcome, and tournament info. Supports pagination.",
+        "Find specific matches. Search by date, teams, format, venue, or tournament. Returns match results with teams, scores, venue, date, outcome, and player of the match. " +
+        "Use for 'India vs Australia Tests in 2023', 'IPL 2024 finals', or 'Matches at Lord\\'s this year'. " +
+        "Use this to find match_id before calling get_match_scorecard or get_innings_progression. " +
+        "Not for team records or win/loss tallies (use get_head_to_head or get_team_form).",
       inputSchema: {
         ...MatchFilterSchema.shape,
         limit: z

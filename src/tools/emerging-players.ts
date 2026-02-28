@@ -13,7 +13,9 @@ export function registerEmergingPlayers(
     {
       title: "Emerging Players",
       description:
-        "Find players whose stats have significantly improved in recent seasons vs career baseline. The 'stocks rising' query. Compares recent window to career averages. Use for 'Which batters are improving in T20s?' or 'Rising bowling talent in IPL'.",
+        "Which players are improving the most? Compares recent season stats to career baseline to find players whose average, strike rate, economy, or wickets per match have significantly improved. " +
+        "Use for 'Rising batters in T20s', 'Which IPL bowlers improved in 2024?', or 'Breakout performers this season'. " +
+        "Not for current form or recent results (use get_team_form) or career stats (use get_player_stats).",
       inputSchema: {
         perspective: z
           .enum(["batting", "bowling"])

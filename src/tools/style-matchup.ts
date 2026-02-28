@@ -14,12 +14,10 @@ export function registerStyleMatchup(
     {
       title: "Style-Based Matchup",
       description:
-        "Analyze a player's performance broken down by bowling style or batting hand, optionally within a specific match phase. " +
-        "For batters: stats against pace vs spin, or left-arm pace vs right-arm offbreak, etc. " +
-        "For bowlers: stats against right-hand vs left-hand batters. " +
-        "Supports phase filtering to combine style and phase dimensions (e.g. 'Bumrah vs left-handers at the death'). " +
-        "Requires enriched player data (run 'npm run enrich' first). " +
-        "Use for 'Kohli vs left-arm pace', 'Bumrah against left-handers in the powerplay', 'How does Smith bat against spin at the death?'",
+        "How does this player perform against pace vs spin / left-handers vs right-handers? Breaks down a batter's stats by bowling style or a bowler's stats by batting hand. " +
+        "Supports phase filtering (e.g. 'Bumrah vs left-handers at the death'). Requires enriched player data (run 'npm run enrich' first). " +
+        "Use for 'Kohli vs left-arm pace', 'Smith against spin in Tests', or 'Rashid Khan vs right-handers in IPL'. " +
+        "Not for specific batter-vs-bowler matchups (use get_matchup) or general career stats (use get_player_stats).",
       inputSchema: {
         player_name: z
           .string()

@@ -20,7 +20,9 @@ export function registerPhaseStats(
     {
       title: "Phase Stats",
       description:
-        "Get batting or bowling stats for a specific match phase (powerplay overs 1-6, middle overs 7-15, death overs 16-20). Works for individual players and team aggregates. Use for 'How does Bumrah bowl at the death?' or 'Best powerplay batters in IPL 2024'.",
+        "How does a player perform in powerplay / middle / death overs? Batting or bowling stats scoped to a match phase: powerplay (1-6), middle (7-15), or death (16-20). " +
+        "Works for individual players or as a leaderboard. Use for 'Bumrah\\'s death bowling economy', 'Best powerplay batters in IPL 2024', or 'Rashid Khan\\'s middle overs stats'. " +
+        "Not for full career stats across all overs (use get_player_stats) or style-based phase analysis (use get_style_matchup with phase filter).",
       inputSchema: {
         phase: z
           .enum(["powerplay", "middle", "death"])

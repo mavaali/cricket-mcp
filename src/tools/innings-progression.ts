@@ -12,7 +12,9 @@ export function registerInningsProgression(
     {
       title: "Innings Progression",
       description:
-        "Over-by-over scoring progression for a specific match innings. Shows runs per over, cumulative runs, wickets, run rate. Use for 'Show me the scoring progression of that 438 chase' or 'How did India's innings unfold?'",
+        "How did the scoring unfold over by over? Over-by-over progression showing runs per over, cumulative runs, wickets, and run rate for a single match innings. " +
+        "Use for 'Scoring progression of the 438 chase', 'How did India\\'s innings unfold?', or 'Run rate in the 2nd innings'. " +
+        "Requires match_id -- use search_matches first. Not for aggregated player or team stats (use get_player_stats or get_team_form).",
       inputSchema: {
         match_id: z
           .string()

@@ -13,7 +13,9 @@ export function registerMatchScorecard(
     {
       title: "Match Scorecard",
       description:
-        "Get the full scorecard for a specific cricket match. Returns match info, batting card, bowling card, extras, and totals for each innings. Use search_matches first to find the match_id.",
+        "Show me the full scorecard of a match. Complete batting and bowling cards with runs, balls, fours, sixes, strike rate, dismissals, bowling figures, extras, and totals per innings. " +
+        "Use for 'Scorecard of the 2023 World Cup final', 'What did Kohli score in that match?', or 'Bowling figures from match 1417867'. " +
+        "Requires match_id -- use search_matches first to find it. Not for aggregated stats across matches (use get_player_stats).",
       inputSchema: {
         match_id: z.string().describe("Cricsheet match ID (e.g., '1417867')."),
       },

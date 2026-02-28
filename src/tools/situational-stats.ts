@@ -17,7 +17,10 @@ export function registerSituationalStats(
     {
       title: "Situational Stats",
       description:
-        "Get player or team stats in specific match situations: chasing vs setting, batting under pressure (3+ wickets down in first 10 overs), or by batting position. Format-aware: in Tests 'chasing' means 4th innings, 'setting' means 1st innings; in LOIs 'chasing' = innings 2, 'setting' = innings 1. Use for 'Kohli while chasing in ODIs', '4th innings specialists in Tests', or 'Best #3 batters in Tests'.",
+        "How does a player bat when chasing / setting / under pressure / at a specific position? Batting stats filtered by match situation. " +
+        "Format-aware: in Tests 'chasing' = 4th innings, 'setting' = 1st innings; in LOIs chasing = 2nd innings. " +
+        "Use for 'Kohli\\'s average while chasing in ODIs', 'Best #3 batters in Tests', or 'Who performs under pressure in T20s?'. " +
+        "Not for phase-of-innings splits like powerplay (use get_phase_stats) or general career stats (use get_player_stats).",
       inputSchema: {
         situation: z
           .enum(["chasing", "setting", "pressure", "batting_position"])

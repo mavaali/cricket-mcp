@@ -18,7 +18,9 @@ export function registerPlayerComparison(
     {
       title: "Player Comparison",
       description:
-        "Side-by-side comparison of two players' stats with same filters. Use for 'Compare Kohli and Root in Tests since 2020' or 'Bumrah vs Starc in ODIs'.",
+        "How do two players compare? Side-by-side batting or bowling stats for two players under the same filters. " +
+        "Use for 'Kohli vs Root in Tests since 2020', 'Bumrah vs Starc in ODIs', or 'Warner vs Babar in T20 World Cups'. " +
+        "Not for individual player stats (use get_player_stats) or batter-vs-bowler matchup (use get_matchup).",
       inputSchema: {
         player1_name: z
           .string()

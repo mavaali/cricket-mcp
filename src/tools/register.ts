@@ -10,8 +10,6 @@ import { registerBowlingRecords } from "./bowling-records.js";
 import { registerVenueStats } from "./venue-stats.js";
 import { registerPartnerships } from "./partnerships.js";
 import { registerMatchup } from "./matchup.js";
-import { registerBatterVsTeamBowling } from "./batter-vs-team-bowling.js";
-import { registerMatchupRecords } from "./matchup-records.js";
 import { registerPhaseStats } from "./phase-stats.js";
 import { registerSituationalStats } from "./situational-stats.js";
 import { registerTossAnalysis } from "./toss-analysis.js";
@@ -42,8 +40,6 @@ export function registerAllTools(
   registerVenueStats(server, db);
   registerPartnerships(server, db);
   registerMatchup(server, db);
-  registerBatterVsTeamBowling(server, db);
-  registerMatchupRecords(server, db);
   registerPhaseStats(server, db);
   registerSituationalStats(server, db);
   registerTossAnalysis(server, db);
