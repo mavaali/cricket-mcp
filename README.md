@@ -238,6 +238,31 @@ npx tsx src/index.ts serve --backend onelake \
 
 See [cricket-data-factory](https://github.com/mavaali/cricket-data-factory) for the full pipeline that loads Cricsheet data into a Fabric lakehouse.
 
+### Remote hosting (HTTP transport)
+
+By default, cricket-mcp uses stdio transport for local MCP clients (Claude Desktop, VS Code). To host the server remotely, use the HTTP transport:
+
+```bash
+npx tsx src/index.ts serve --transport http --port 3000
+```
+
+This starts an HTTP server on the specified port with a single `/mcp` endpoint. MCP clients connect by sending JSON-RPC requests to `http://your-server:3000/mcp`. The server supports multiple concurrent client sessions, each with its own session ID.
+
+CORS headers are included on all responses, so browser-based MCP clients work out of the box.
+
+### Docker
+
+Build a self-contained Docker image that ingests all Cricsheet data and serves over HTTP:
+
+```bash
+docker build -t cricket-mcp .
+docker run -p 3000:3000 cricket-mcp
+```
+
+The build takes a few minutes (downloads ~94 MB of Cricsheet data, ingests 21K+ matches, enriches player metadata). The resulting image is ~600 MB.
+
+To deploy on any cloud provider, push the image to a container registry and run it on a VM, managed container service (Cloud Run, ECS, Azure Container Apps), or Kubernetes.
+
 ## Example Queries
 
 ### "How does Kohli fare against Hazlewood in ODIs?"
@@ -339,6 +364,10 @@ Data is updated regularly and includes matches through early 2026 at time of wri
 Within the coverage window, the data is ball-by-ball — every delivery, every run, every dismissal, every extra. Phase analysis, matchup breakdowns, strike rates, dot ball percentages, and other granular metrics are all derived from actual delivery data, not aggregated scorecards.
 
 ## Changelog
+
+### v0.6.0
+- **HTTP transport**: `--transport http --port 3000` starts an HTTP server for remote hosting with session management and CORS support
+- **Dockerfile**: multi-stage build that ingests data and serves over HTTP — `docker build && docker run` to deploy
 
 ### v0.5.0
 - Consolidated matchup tools (27 → 25): `get_matchup` now handles specific matchups, batter-vs-team breakdowns, and matchup leaderboards in one tool

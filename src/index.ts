@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { runIngest, runUpdate } from "./ingest/pipeline.js";
 import { runEnrichment } from "./ingest/enrichment.js";
-import { startServer } from "./server.js";
+import { startServer, startHttpServer } from "./server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, "..");
@@ -73,7 +73,7 @@ program
 
 program
   .command("serve")
-  .description("Start the MCP server (stdio transport)")
+  .description("Start the MCP server")
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
   .option(
     "--backend <type>",
@@ -82,23 +82,41 @@ program
   )
   .option("--workspace-id <id>", "Fabric workspace ID (required for onelake backend)")
   .option("--lakehouse-id <id>", "Fabric lakehouse ID (required for onelake backend)")
+  .option(
+    "--transport <type>",
+    "Transport: 'stdio' (default, for local MCP clients) or 'http' (for remote hosting)",
+    "stdio"
+  )
+  .option("--port <port>", "HTTP port (only used with --transport http)", "3000")
   .action(async (options) => {
-    if (options.backend === "onelake") {
-      if (!options.workspaceId || !options.lakehouseId) {
-        console.error(
-          "Error: --workspace-id and --lakehouse-id are required for onelake backend"
-        );
+    const serverOptions =
+      options.backend === "onelake"
+        ? (() => {
+            if (!options.workspaceId || !options.lakehouseId) {
+              console.error(
+                "Error: --workspace-id and --lakehouse-id are required for onelake backend"
+              );
+              process.exit(1);
+            }
+            return {
+              backend: "onelake" as const,
+              onelake: {
+                workspaceId: options.workspaceId,
+                lakehouseId: options.lakehouseId,
+              },
+            };
+          })()
+        : options.db;
+
+    if (options.transport === "http") {
+      const port = parseInt(options.port, 10);
+      if (isNaN(port) || port < 1 || port > 65535) {
+        console.error("Error: --port must be a valid port number (1-65535)");
         process.exit(1);
       }
-      await startServer({
-        backend: "onelake",
-        onelake: {
-          workspaceId: options.workspaceId,
-          lakehouseId: options.lakehouseId,
-        },
-      });
+      await startHttpServer(serverOptions, port);
     } else {
-      await startServer(options.db);
+      await startServer(serverOptions);
     }
   });
 

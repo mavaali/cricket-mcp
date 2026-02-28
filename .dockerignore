@@ -1,0 +1,8 @@
+node_modules
+dist
+data/cricket.duckdb
+data/cricket.duckdb.wal
+.git
+.claude
+*.md
+!README.md
