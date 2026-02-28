@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS players (
   player_name     VARCHAR NOT NULL,
   batting_style   VARCHAR,
   bowling_style   VARCHAR,
+  bowling_style_broad VARCHAR,
+  bowling_style_arm   VARCHAR,
   playing_role    VARCHAR,
   country         VARCHAR
 );
@@ -95,6 +97,12 @@ CREATE INDEX IF NOT EXISTS idx_matches_season ON matches(season);
 CREATE INDEX IF NOT EXISTS idx_players_name ON players(player_name);
 CREATE INDEX IF NOT EXISTS idx_players_batting_style ON players(batting_style);
 CREATE INDEX IF NOT EXISTS idx_players_bowling_style ON players(bowling_style);
+CREATE INDEX IF NOT EXISTS idx_players_bowling_style_broad ON players(bowling_style_broad);
+CREATE INDEX IF NOT EXISTS idx_players_bowling_style_arm ON players(bowling_style_arm);
+CREATE INDEX IF NOT EXISTS idx_deliveries_wicket_bowler ON deliveries(is_wicket, bowler_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_wicket_batter ON deliveries(is_wicket, batter_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_wicket_kind ON deliveries(is_wicket, wicket_kind);
+CREATE INDEX IF NOT EXISTS idx_deliveries_match_innings ON deliveries(match_id, innings_number);
 `;
 
 export async function createSchema(conn: DuckDBConnection): Promise<void> {
@@ -117,6 +125,8 @@ export async function migrateSchema(conn: DuckDBConnection): Promise<void> {
     { name: "bowling_style", type: "VARCHAR" },
     { name: "playing_role", type: "VARCHAR" },
     { name: "country", type: "VARCHAR" },
+    { name: "bowling_style_broad", type: "VARCHAR" },
+    { name: "bowling_style_arm", type: "VARCHAR" },
   ];
 
   for (const col of newColumns) {

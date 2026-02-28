@@ -182,6 +182,8 @@ export interface PlayerRow {
   player_name: string;
   batting_style?: string | null;
   bowling_style?: string | null;
+  bowling_style_broad?: string | null;
+  bowling_style_arm?: string | null;
   playing_role?: string | null;
   country?: string | null;
 }

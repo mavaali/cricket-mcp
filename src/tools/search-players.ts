@@ -2,7 +2,6 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
-import { BOWLING_WICKET_KINDS } from "../queries/common.js";
 
 export function registerSearchPlayers(
   server: McpServer,
@@ -13,7 +12,7 @@ export function registerSearchPlayers(
     {
       title: "Search Players",
       description:
-        "Search for cricket players by name. Returns matching players with basic career stats. Use this to find exact player names before querying detailed stats.",
+        "Search for cricket players by name. Returns matching player names and metadata (batting style, bowling style, role, country). Use this to find exact player names before querying detailed stats with get_player_stats.",
       inputSchema: {
         query: z
           .string()
@@ -36,20 +35,10 @@ export function registerSearchPlayers(
           p.batting_style,
           p.bowling_style,
           p.playing_role,
-          p.country,
-          COUNT(DISTINCT d_bat.match_id) AS matches_batted,
-          COALESCE(SUM(d_bat.runs_batter), 0) AS total_runs,
-          COUNT(DISTINCT d_bowl.match_id) AS matches_bowled,
-          COUNT(*) FILTER (WHERE d_bowl.is_wicket AND d_bowl.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS total_wickets
+          p.country
         FROM players p
-        LEFT JOIN deliveries d_bat ON p.player_id = d_bat.batter_id
-        LEFT JOIN deliveries d_bowl ON p.player_id = d_bowl.bowler_id
         WHERE p.player_name ILIKE '%' || $query || '%'
-        GROUP BY p.player_id, p.player_name
-        ORDER BY
-          COALESCE(SUM(d_bat.runs_batter), 0) +
-          COUNT(*) FILTER (WHERE d_bowl.is_wicket AND d_bowl.wicket_kind IN ${BOWLING_WICKET_KINDS}) * 25
-          DESC
+        ORDER BY p.player_name
         LIMIT $limit
       `;
 

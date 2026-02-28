@@ -17,51 +17,10 @@ export function buildBowlingStyleExpr(
     return `COALESCE(${alias}.bowling_style, 'Unknown')`;
   }
   if (grouping === "broad") {
-    return `
-      CASE
-        WHEN ${alias}.bowling_style ILIKE '%fast%'
-             OR (${alias}.bowling_style ILIKE '%medium%'
-                 AND ${alias}.bowling_style NOT ILIKE '%orthodox%'
-                 AND ${alias}.bowling_style NOT ILIKE '%spin%'
-                 AND ${alias}.bowling_style NOT ILIKE '%break%')
-        THEN 'Pace'
-        WHEN ${alias}.bowling_style ILIKE '%spin%'
-             OR ${alias}.bowling_style ILIKE '%orthodox%'
-             OR ${alias}.bowling_style ILIKE '%break%'
-             OR ${alias}.bowling_style ILIKE '%chinaman%'
-        THEN 'Spin'
-        ELSE 'Unknown'
-      END`;
+    return `COALESCE(${alias}.bowling_style_broad, 'Unknown')`;
   }
   // grouping === "arm"
-  return `
-    CASE
-      WHEN (${alias}.bowling_style ILIKE '%fast%'
-            OR (${alias}.bowling_style ILIKE '%medium%'
-                AND ${alias}.bowling_style NOT ILIKE '%orthodox%'
-                AND ${alias}.bowling_style NOT ILIKE '%spin%'
-                AND ${alias}.bowling_style NOT ILIKE '%break%'))
-           AND ${alias}.bowling_style ILIKE '%left%'
-      THEN 'Left-arm Pace'
-      WHEN ${alias}.bowling_style ILIKE '%fast%'
-           OR (${alias}.bowling_style ILIKE '%medium%'
-               AND ${alias}.bowling_style NOT ILIKE '%orthodox%'
-               AND ${alias}.bowling_style NOT ILIKE '%spin%'
-               AND ${alias}.bowling_style NOT ILIKE '%break%')
-      THEN 'Right-arm Pace'
-      WHEN (${alias}.bowling_style ILIKE '%spin%'
-            OR ${alias}.bowling_style ILIKE '%orthodox%'
-            OR ${alias}.bowling_style ILIKE '%break%'
-            OR ${alias}.bowling_style ILIKE '%chinaman%')
-           AND ${alias}.bowling_style ILIKE '%left%'
-      THEN 'Left-arm Spin'
-      WHEN ${alias}.bowling_style ILIKE '%spin%'
-           OR ${alias}.bowling_style ILIKE '%orthodox%'
-           OR ${alias}.bowling_style ILIKE '%break%'
-           OR ${alias}.bowling_style ILIKE '%chinaman%'
-      THEN 'Right-arm Spin'
-      ELSE 'Unknown'
-    END`;
+  return `COALESCE(${alias}.bowling_style_arm, 'Unknown')`;
 }
 
 export function buildStyleMatchupQuery(options: {

@@ -83,6 +83,53 @@ export async function runEnrichment(options: {
   `;
   await conn.run(updateSql);
 
+  // Compute derived bowling style columns
+  await conn.run(`
+    UPDATE players SET
+      bowling_style_broad = CASE
+        WHEN bowling_style ILIKE '%fast%'
+             OR (bowling_style ILIKE '%medium%'
+                 AND bowling_style NOT ILIKE '%orthodox%'
+                 AND bowling_style NOT ILIKE '%spin%'
+                 AND bowling_style NOT ILIKE '%break%')
+        THEN 'Pace'
+        WHEN bowling_style ILIKE '%spin%'
+             OR bowling_style ILIKE '%orthodox%'
+             OR bowling_style ILIKE '%break%'
+             OR bowling_style ILIKE '%chinaman%'
+        THEN 'Spin'
+        ELSE 'Unknown'
+      END,
+      bowling_style_arm = CASE
+        WHEN (bowling_style ILIKE '%fast%'
+              OR (bowling_style ILIKE '%medium%'
+                  AND bowling_style NOT ILIKE '%orthodox%'
+                  AND bowling_style NOT ILIKE '%spin%'
+                  AND bowling_style NOT ILIKE '%break%'))
+             AND bowling_style ILIKE '%left%'
+        THEN 'Left-arm Pace'
+        WHEN bowling_style ILIKE '%fast%'
+             OR (bowling_style ILIKE '%medium%'
+                 AND bowling_style NOT ILIKE '%orthodox%'
+                 AND bowling_style NOT ILIKE '%spin%'
+                 AND bowling_style NOT ILIKE '%break%')
+        THEN 'Right-arm Pace'
+        WHEN (bowling_style ILIKE '%spin%'
+              OR bowling_style ILIKE '%orthodox%'
+              OR bowling_style ILIKE '%break%'
+              OR bowling_style ILIKE '%chinaman%')
+             AND bowling_style ILIKE '%left%'
+        THEN 'Left-arm Spin'
+        WHEN bowling_style ILIKE '%spin%'
+             OR bowling_style ILIKE '%orthodox%'
+             OR bowling_style ILIKE '%break%'
+             OR bowling_style ILIKE '%chinaman%'
+        THEN 'Right-arm Spin'
+        ELSE 'Unknown'
+      END
+    WHERE bowling_style IS NOT NULL
+  `);
+
   // Report results
   const totalResult = await conn.runAndReadAll(
     "SELECT COUNT(*) AS cnt FROM players"
