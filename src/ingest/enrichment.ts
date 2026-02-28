@@ -73,13 +73,20 @@ export async function runEnrichment(options: {
     );
   }
 
+  // Deduplicate CSV rows (DuckDB UPDATE fails if multiple source rows match one target)
+  await conn.run(`
+    CREATE OR REPLACE TEMPORARY TABLE player_meta AS
+    SELECT DISTINCT ON (${idColumn}) *
+    FROM player_meta
+    WHERE ${idColumn} IS NOT NULL
+  `);
+
   // Bulk update
   const updateSql = `
     UPDATE players p
     SET ${updateParts.join(", ")}
     FROM player_meta pm
     WHERE p.player_id = pm.${idColumn}
-      AND pm.${idColumn} IS NOT NULL
   `;
   await conn.run(updateSql);
 
