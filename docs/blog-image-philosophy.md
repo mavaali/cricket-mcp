@@ -1,0 +1,13 @@
+# Stochastic Cartography
+
+A design philosophy for mapping the unmappable — the invisible forces that shape outcomes in systems of apparent chaos.
+
+## Philosophy
+
+Stochastic Cartography begins with the premise that every event carries weight invisible to the naked eye. Like gravitational fields warping spacetime around mass, context bends the meaning of every action. The philosophy demands that we render these hidden forces visible — not through explanation, but through the accumulation of precise, systematic marks that together reveal a topology of significance. Every element is placed with the meticulous care of a cartographer charting coastlines that shift with each tide, yet finding in that flux a deeper permanent structure.
+
+Form emerges from density. Thin parallel lines, concentric arcs, and dot clusters build landscapes of intensity — denser where the stakes are highest, sparser where context is forgiving. The visual language borrows from contour maps, where elevation is implied through the patient repetition of lines at calculated intervals. This is not decoration; it is the painstaking labor of someone who has spent countless hours translating invisible pressure into visible terrain. The composition must feel like an artifact from an imaginary observatory — systematic, reverent, undeniably the product of deep expertise.
+
+Color operates as a thermodynamic system. A restrained palette — deep indigo, warm amber, chalk white, and a single accent of vermillion — creates zones of temperature across the canvas. Cool tones occupy the vast analytical spaces; warm tones concentrate where forces converge. The transitions between zones are never gradient but always structural — hard edges where contour lines shift elevation, creating a visual tectonics. Every chromatic decision reflects master-level calibration, as though each hue was tested against dozens before earning its place.
+
+Scale and rhythm follow the logic of natural phenomena observed under a microscope. Small repeated elements — marks, ticks, circles — accumulate into macro-patterns that only reveal themselves at a distance. Up close, each mark is precise and intentional. At arm's length, the aggregate becomes a field, a wave, a distribution. Typography exists only as specimen labels — thin, clinical, positioned with the exactitude of a reference index in a scientific atlas. Words are rare, functional, and float within the composition as coordinates rather than narration. The overall effect is of a document that proves something fleeting can be studied, mapped, and understood through patient, expert attention to the systems that govern it.

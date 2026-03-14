@@ -9,6 +9,7 @@ import { getConnection } from "./db/connection.js";
 import { getOneLakeConnection, type OneLakeConfig } from "./backends/onelake.js";
 import { migrateSchema } from "./db/schema.js";
 import { registerAllTools } from "./tools/register.js";
+import { registerAllPrompts } from "./prompts/register.js";
 
 export interface ServerOptions {
   dbPath?: string;
@@ -27,7 +28,7 @@ function initConnection(
   if (typeof options === "string") {
     // Legacy: string path = local DuckDB file
     return getConnection(options).then(async (conn) => {
-      await migrateSchema(conn);
+      try { await migrateSchema(conn); } catch { /* read-only mode — tables already exist */ }
       return conn;
     });
   }
@@ -41,7 +42,7 @@ function initConnection(
   // Default: local DuckDB
   const dbPath = options.dbPath!;
   return getConnection(dbPath).then(async (conn) => {
-    await migrateSchema(conn);
+    try { await migrateSchema(conn); } catch { /* read-only mode — tables already exist */ }
     return conn;
   });
 }
@@ -61,6 +62,7 @@ export async function startServer(
   // Register tools with the connection promise. Each tool awaits it
   // on first invocation so the tool list is available immediately.
   registerAllTools(server, connectionPromise);
+  registerAllPrompts(server);
 
   // Connect the MCP transport BEFORE the DB is ready.
   // This lets the client complete the initialize handshake instantly
@@ -172,6 +174,7 @@ export async function startHttpServer(
             version: "1.0.0",
           });
           registerAllTools(mcpServer, connectionPromise);
+          registerAllPrompts(mcpServer);
           await mcpServer.connect(transport);
 
           await transport.handleRequest(req, res, body);

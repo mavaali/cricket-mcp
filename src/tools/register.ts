@@ -25,6 +25,8 @@ import { registerSeasonStats } from "./season-stats.js";
 import { registerPlayerComparison } from "./player-comparison.js";
 import { registerInningsProgression } from "./innings-progression.js";
 import { registerStyleMatchup } from "./style-matchup.js";
+import { registerPlayerForm } from "./player-form.js";
+import { registerMatchImpact } from "./match-impact.js";
 
 export function registerAllTools(
   server: McpServer,
@@ -55,4 +57,6 @@ export function registerAllTools(
   registerPlayerComparison(server, db);
   registerInningsProgression(server, db);
   registerStyleMatchup(server, db);
+  registerPlayerForm(server, db);
+  registerMatchImpact(server, db);
 }
