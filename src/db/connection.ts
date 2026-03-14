@@ -11,7 +11,7 @@ const G = globalThis as unknown as {
   __duckdb_connection?: DuckDBConnection;
 };
 
-export async function getConnection(dbPath: string): Promise<DuckDBConnection> {
+export async function getConnection(dbPath: string, readOnly = true): Promise<DuckDBConnection> {
   if (G.__duckdb_connection) return G.__duckdb_connection;
 
   const dir = path.dirname(dbPath);
@@ -20,7 +20,7 @@ export async function getConnection(dbPath: string): Promise<DuckDBConnection> {
   }
 
   G.__duckdb_instance = await DuckDBInstance.create(dbPath, {
-    access_mode: "READ_ONLY",
+    ...(readOnly ? { access_mode: "READ_ONLY" } : {}),
   });
   G.__duckdb_connection = await G.__duckdb_instance.connect();
   return G.__duckdb_connection;

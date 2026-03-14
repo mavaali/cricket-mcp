@@ -20,7 +20,7 @@ export async function runEnrichment(options: {
 
   console.error(`Enriching players from ${csvAbsPath}...`);
 
-  const conn = await getConnection(options.dbPath);
+  const conn = await getConnection(options.dbPath, false);
 
   // Ensure new columns exist
   await migrateSchema(conn);

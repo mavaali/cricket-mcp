@@ -11,6 +11,7 @@ export async function runIngest(options: {
   dataDir?: string;
   dbPath?: string;
   force?: boolean;
+  skipIndexes?: boolean;
 }): Promise<void> {
   const dataDir = options.dataDir ?? "./data";
   const dbPath = options.dbPath ?? path.join(dataDir, "cricket.duckdb");
@@ -25,7 +26,7 @@ export async function runIngest(options: {
   console.error(`\nTotal JSON files to ingest: ${jsonFiles.length}`);
 
   // Step 2: Open DB and create schema
-  const conn = await getConnection(dbPath);
+  const conn = await getConnection(dbPath, false);
   await createSchema(conn);
   await migrateSchema(conn);
 
@@ -63,8 +64,12 @@ export async function runIngest(options: {
   }
 
   // Step 4: Create indexes
-  console.error("\nCreating indexes...");
-  await createIndexes(conn);
+  if (options.skipIndexes) {
+    console.error("\nSkipping index creation (--no-index)");
+  } else {
+    console.error("\nCreating indexes...");
+    await createIndexes(conn);
+  }
 
   // Step 5: Print summary
   const matchCount = await conn.runAndReadAll(
@@ -97,6 +102,16 @@ export async function runIngest(options: {
   console.error("Done!");
 }
 
+export async function runCreateIndexes(options: {
+  dbPath: string;
+}): Promise<void> {
+  const conn = await getConnection(options.dbPath, false);
+  console.error("Creating indexes...");
+  await createIndexes(conn);
+  await closeConnection();
+  console.error("Indexes created successfully!");
+}
+
 export async function runUpdate(options: {
   days?: 2 | 7 | 30;
   dbPath?: string;
@@ -117,7 +132,7 @@ export async function runUpdate(options: {
   console.error(`\nFound ${jsonFiles.length} matches in recent ${days}-day ZIP`);
 
   // Step 2: Open DB, get existing match IDs
-  const conn = await getConnection(dbPath);
+  const conn = await getConnection(dbPath, false);
   await createSchema(conn); // idempotent — safe as fallback
   await migrateSchema(conn);
 

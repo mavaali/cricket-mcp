@@ -2,7 +2,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
-import { runIngest, runUpdate } from "./ingest/pipeline.js";
+import { runIngest, runUpdate, runCreateIndexes } from "./ingest/pipeline.js";
 import { runEnrichment } from "./ingest/enrichment.js";
 import { startServer, startHttpServer } from "./server.js";
 
@@ -29,12 +29,14 @@ program
   .option("--data-dir <dir>", "Data directory", DEFAULT_DATA_DIR)
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
   .option("--force", "Re-download even if data exists", false)
+  .option("--no-index", "Skip index creation (useful in Docker builds)")
   .action(async (options) => {
     await runIngest({
       url: options.url,
       dataDir: options.dataDir,
       dbPath: options.db,
       force: options.force,
+      skipIndexes: !options.index,
     });
   });
 
@@ -69,6 +71,14 @@ program
       csvPath: options.csv,
       dbPath: options.db,
     });
+  });
+
+program
+  .command("create-indexes")
+  .description("Create database indexes (separate process to avoid memory issues in Docker)")
+  .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
+  .action(async (options) => {
+    await runCreateIndexes({ dbPath: options.db });
   });
 
 program
