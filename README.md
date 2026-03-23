@@ -19,8 +19,10 @@ Ask Claude things like:
 - *"Which bowlers have the best dot ball % at the death?"*
 - *"Which batters are improving this season?"*
 - *"Break down Rohit Sharma's record against each of England's bowlers"*
+- *"Who had the biggest impact in the T20 World Cup 2024 final?"*
+- *"Bumrah's last 10 T20 innings — is he in form?"*
 
-## Tools (25 total)
+## Tools (28 total)
 
 ### Player Stats
 | Tool | What it does |
@@ -81,6 +83,13 @@ Ask Claude things like:
 |------|-------------|
 | `get_fielding_stats` | Catches, stumpings, run outs per fielder |
 | `get_dismissal_analysis` | Breakdown of how a player gets out (or gets batters out) |
+
+### Impact Scoring
+| Tool | What it does |
+|------|-------------|
+| `get_match_impact` | Context-weighted impact scores for every player in a match — batting, bowling, fielding combined |
+| `get_career_impact` | Aggregated impact scores across a player's career or filtered matches |
+| `get_player_form` | Last N innings with individual scores, strike rates, and form summary |
 
 ### Innings Analysis
 | Tool | What it does |
@@ -305,6 +314,12 @@ Uses `get_style_matchup` with `player_name: "Kohli"`, `perspective: "batting"`, 
 
 Uses `get_style_matchup` with `player_name: "Bumrah"`, `perspective: "bowling"`.
 
+### "Who had the biggest impact in the T20 World Cup 2024 final?"
+
+Uses `get_match_impact` with `match_id: "1415755"` (find the ID via `search_matches` first).
+
+Returns phase-relative impact scores: Bumrah's 2/18 in 4 overs scores an economy_value of **17.63** because his 4.5 RPO in death overs was extraordinary against a match death-over average of 10+. Axar Patel tops the chart (136.82) with a 47(31) plus a death-over wicket.
+
 ### "Which batters are improving in T20s this season?"
 
 Uses `get_emerging_players` with `perspective: "batting"`, `match_type: "T20"`.
@@ -317,7 +332,7 @@ Uses `get_discipline_stats` with `perspective: "bowling"`, `phase: "death"`, `ev
 
 1. **Data**: [Cricsheet](https://cricsheet.org) provides free, open ball-by-ball data for every international and major domestic cricket match in JSON format.
 2. **Storage**: The `ingest` command downloads, parses, and loads this into a local [DuckDB](https://duckdb.org) database — a columnar analytics engine that eats aggregation queries for breakfast.
-3. **Server**: The MCP server exposes 25 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
+3. **Server**: The MCP server exposes 28 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
 
 ### Database schema
 
@@ -364,6 +379,14 @@ Data is updated regularly and includes matches through early 2026 at time of wri
 Within the coverage window, the data is ball-by-ball — every delivery, every run, every dismissal, every extra. Phase analysis, matchup breakdowns, strike rates, dot ball percentages, and other granular metrics are all derived from actual delivery data, not aggregated scorecards.
 
 ## Changelog
+
+### v0.8.0
+- **Phase-relative impact scoring**: bowling economy is now scored per-phase against the match's average economy for that phase. Conceding 6 RPO in death overs (where 10+ is typical) earns far more credit than the same economy in middle overs. Batting gets a death-over SR bonus (1.3×) and powerplay aggression bonus (1.1×).
+
+### v0.7.0
+- **Player Impact Rating**: 3 new tools (`get_match_impact`, `get_career_impact`, `get_player_form`) that compute context-weighted impact scores combining batting contribution, bowling wicket quality + economy, and fielding
+- Impact scores account for: run contribution %, strike rate vs match average, entry difficulty, lost chase discount, wicket quality (set/star batters, top order, partnership breaks), economy vs match run rate, fielding dismissals, match importance (tournament stage + closeness)
+- **25 → 28 tools**
 
 ### v0.6.0
 - **HTTP transport**: `--transport http --port 3000` starts an HTTP server for remote hosting with session management and CORS support
