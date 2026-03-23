@@ -39,9 +39,16 @@ const ECONOMY_SCALE_FACTOR = 2.0;
 // Formula: 1 + max(0, 1 - margin/DEFENCE_MARGIN_CAP)
 const DEFENCE_MARGIN_CAP = 25; // margins above this get no defence bonus
 const MIN_OVERS_FOR_ECONOMY = 2;
-const DEATH_PHASE_MULTIPLIER = 1.3;
-const MIDDLE_PHASE_MULTIPLIER = 1.1;
-const POWERPLAY_PHASE_MULTIPLIER = 1.0;
+// Phase multipliers are now implicit — economy is scored relative to match
+// phase averages so death-over economy naturally gets more credit.
+// These scale the per-phase contribution to control overall magnitude.
+const PHASE_ECONOMY_FLOOR = 0.5; // min economy to avoid division by near-zero
+
+// Batting — death-over acceleration bonus
+// Runs scored in death overs (16-20) get a bonus multiplier on their SR factor
+const BATTING_DEATH_SR_BONUS = 1.3;   // 30% SR boost for death-over runs
+const BATTING_PP_SR_BONUS = 1.1;      // 10% SR boost for powerplay aggression
+const MIN_PHASE_BALLS_FOR_BONUS = 4;  // need at least 4 balls in phase
 
 // Fielding — supporting contribution, not primary
 const CATCH_BASE = 2;
@@ -144,6 +151,27 @@ export function registerMatchImpact(
           ? matchTotalRuns / (matchTotalBalls / 6)
           : 6;
 
+      // ── 2b. Match-level per-phase economy (for relative bowling scoring) ──
+      const phaseEconRows = await runQuery(
+        db,
+        `SELECT
+           SUM(CASE WHEN over_number <= 5 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS pp_runs,
+           COUNT(*) FILTER (WHERE over_number <= 5 AND extras_wides = 0 AND extras_noballs = 0) AS pp_balls,
+           SUM(CASE WHEN over_number BETWEEN 6 AND 14 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS mid_runs,
+           COUNT(*) FILTER (WHERE over_number BETWEEN 6 AND 14 AND extras_wides = 0 AND extras_noballs = 0) AS mid_balls,
+           SUM(CASE WHEN over_number >= 15 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS death_runs,
+           COUNT(*) FILTER (WHERE over_number >= 15 AND extras_wides = 0 AND extras_noballs = 0) AS death_balls
+         FROM deliveries
+         WHERE match_id = $match_id`,
+        { match_id }
+      );
+      const pe = phaseEconRows[0] ?? {};
+      const matchPhaseEcon = {
+        pp: Number(pe.pp_balls ?? 0) > 0 ? (Number(pe.pp_runs ?? 0) / (Number(pe.pp_balls ?? 0) / 6)) : matchRR,
+        mid: Number(pe.mid_balls ?? 0) > 0 ? (Number(pe.mid_runs ?? 0) / (Number(pe.mid_balls ?? 0) / 6)) : matchRR,
+        death: Number(pe.death_balls ?? 0) > 0 ? (Number(pe.death_runs ?? 0) / (Number(pe.death_balls ?? 0) / 6)) : matchRR,
+      };
+
       // ── 3. Team totals per innings ───────────────────────────────────
       const teamTotalRows = await runQuery(
         db,
@@ -226,7 +254,12 @@ export function registerMatchImpact(
            COUNT(*) FILTER (WHERE d.runs_batter = 4 AND d.runs_non_boundary = FALSE) AS fours,
            COUNT(*) FILTER (WHERE d.runs_batter = 6) AS sixes,
            MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed,
-           COALESCE(we.wickets_down, 0) AS wickets_at_entry
+           COALESCE(we.wickets_down, 0) AS wickets_at_entry,
+           -- Phase breakdown for death-over SR bonus
+           SUM(CASE WHEN d.over_number <= 5 THEN d.runs_batter ELSE 0 END) AS pp_runs,
+           COUNT(*) FILTER (WHERE d.over_number <= 5 AND d.extras_wides = 0) AS pp_balls,
+           SUM(CASE WHEN d.over_number >= 15 THEN d.runs_batter ELSE 0 END) AS death_runs,
+           COUNT(*) FILTER (WHERE d.over_number >= 15 AND d.extras_wides = 0) AS death_balls
          FROM deliveries d
          LEFT JOIN wickets_at_entry we
            ON we.batter = d.batter AND we.innings_number = d.innings_number
@@ -262,13 +295,38 @@ export function registerMatchImpact(
           : innData.team_total;
         const runContribution = (runs / denominator) * 100;
 
-        // Strike rate factor
+        // Strike rate factor — with phase-aware bonus
+        // Death-over acceleration: scoring fast in overs 16-20 gets extra credit
+        // Powerplay aggression: scoring fast in overs 1-6 gets a smaller bonus
         let srFactor = 1.0;
         if (balls >= MIN_BALLS_FOR_SR_FACTOR && matchAvgSR > 0) {
           const playerSR = (runs / balls) * 100;
           srFactor = playerSR / matchAvgSR;
+
+          // Phase bonus: weighted blend of overall SR with phase-boosted SR
+          const deathBalls = Number(row.death_balls ?? 0);
+          const deathRuns = Number(row.death_runs ?? 0);
+          const ppBalls = Number(row.pp_balls ?? 0);
+          const ppRuns = Number(row.pp_runs ?? 0);
+
+          if (deathBalls >= MIN_PHASE_BALLS_FOR_BONUS && deathRuns > 0) {
+            const deathSR = (deathRuns / deathBalls) * 100;
+            const deathSRFactor = deathSR / matchAvgSR;
+            // Blend: weight death contribution by fraction of balls in death
+            const deathWeight = deathBalls / balls;
+            const nonDeathWeight = 1 - deathWeight;
+            srFactor = nonDeathWeight * srFactor + deathWeight * deathSRFactor * BATTING_DEATH_SR_BONUS;
+          }
+          if (ppBalls >= MIN_PHASE_BALLS_FOR_BONUS && ppRuns > 0) {
+            const ppSR = (ppRuns / ppBalls) * 100;
+            const ppSRFactor = ppSR / matchAvgSR;
+            const ppWeight = ppBalls / balls;
+            const nonPPWeight = 1 - ppWeight;
+            srFactor = nonPPWeight * srFactor + ppWeight * ppSRFactor * BATTING_PP_SR_BONUS;
+          }
+
           // Clamp to avoid extreme values
-          srFactor = Math.max(0.5, Math.min(2.0, srFactor));
+          srFactor = Math.max(0.5, Math.min(2.5, srFactor));
         }
 
         // Situation multiplier
@@ -484,30 +542,34 @@ export function registerMatchImpact(
         const wktValue = bowlerWicketValue.get(name) ?? 0;
         const wktCount = bowlerWicketCount.get(name) ?? 0;
 
-        // Economy value
+        // Economy value — per-phase relative scoring
+        // Each phase is scored against the match's average economy for that phase.
+        // Conceding 6 RPO in death (where match avg might be 10+) is far more
+        // valuable than 6 RPO in middle overs (where match avg might be 7).
         let econValue = 0;
-        if (oversNum >= MIN_OVERS_FOR_ECONOMY && matchRR > 0) {
-          const bowlerEcon = runsConceded / oversNum;
-          // Phase-weighted economy: compute weighted average phase multiplier
+        if (oversNum >= MIN_OVERS_FOR_ECONOMY) {
           const ppBalls = Number(row.pp_balls ?? 0);
+          const ppRuns = Number(row.pp_runs ?? 0);
           const midBalls = Number(row.mid_balls ?? 0);
+          const midRuns = Number(row.mid_runs ?? 0);
           const deathBalls = Number(row.death_balls ?? 0);
-          const totalPhaseBalls = ppBalls + midBalls + deathBalls;
+          const deathRuns = Number(row.death_runs ?? 0);
 
-          let phaseMult = 1.0;
-          if (totalPhaseBalls > 0) {
-            phaseMult =
-              (ppBalls * POWERPLAY_PHASE_MULTIPLIER +
-                midBalls * MIDDLE_PHASE_MULTIPLIER +
-                deathBalls * DEATH_PHASE_MULTIPLIER) /
-              totalPhaseBalls;
+          // Score each phase: (matchPhaseEcon / bowlerPhaseEcon) × overs × scale
+          const phases = [
+            { balls: ppBalls, runs: ppRuns, matchEcon: matchPhaseEcon.pp },
+            { balls: midBalls, runs: midRuns, matchEcon: matchPhaseEcon.mid },
+            { balls: deathBalls, runs: deathRuns, matchEcon: matchPhaseEcon.death },
+          ];
+          for (const ph of phases) {
+            if (ph.balls < 6) continue; // need at least 1 over in this phase
+            const phOvers = ph.balls / 6;
+            const phEcon = ph.runs / phOvers;
+            const phMatchEcon = Math.max(ph.matchEcon, PHASE_ECONOMY_FLOOR);
+            // Ratio > 1 means bowler was more economical than match average
+            econValue += (phMatchEcon / Math.max(phEcon, PHASE_ECONOMY_FLOOR)) *
+              phOvers * ECONOMY_SCALE_FACTOR;
           }
-
-          econValue =
-            (matchRR / Math.max(bowlerEcon, 0.1)) *
-            oversNum *
-            ECONOMY_SCALE_FACTOR *
-            phaseMult;
         }
 
         // Defence bonus: bowlers defending in 2nd innings of a close win
@@ -881,7 +943,12 @@ export function registerMatchImpact(
              COUNT(*) FILTER (WHERE extras_wides = 0 AND extras_noballs = 0) AS legal_balls,
              SUM(runs_total - extras_byes - extras_legbyes) AS runs_conceded,
              COUNT(*) FILTER (WHERE is_wicket AND wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
-             COUNT(*) FILTER (WHERE over_number >= 15 AND extras_wides = 0 AND extras_noballs = 0) AS death_balls
+             COUNT(*) FILTER (WHERE over_number <= 5 AND extras_wides = 0 AND extras_noballs = 0) AS pp_balls,
+             SUM(CASE WHEN over_number <= 5 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS pp_runs,
+             COUNT(*) FILTER (WHERE over_number BETWEEN 6 AND 14 AND extras_wides = 0 AND extras_noballs = 0) AS mid_balls,
+             SUM(CASE WHEN over_number BETWEEN 6 AND 14 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS mid_runs,
+             COUNT(*) FILTER (WHERE over_number >= 15 AND extras_wides = 0 AND extras_noballs = 0) AS death_balls,
+             SUM(CASE WHEN over_number >= 15 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS death_runs
            FROM deliveries
            WHERE match_id = $mid AND bowler = $pname
            GROUP BY innings_number`,
@@ -891,22 +958,25 @@ export function registerMatchImpact(
         let bwlImpact = 0;
         for (const r of bwlRows) {
           const lballs = Number(r.legal_balls ?? 0);
-          const rc = Number(r.runs_conceded ?? 0);
           const wkts = Number(r.wickets ?? 0);
-          const deathB = Number(r.death_balls ?? 0);
           const overs = lballs / 6;
 
-          // Simplified wicket value (use base * count, no per-wicket quality in career mode for speed)
           bwlImpact += wkts * BASE_WICKET_VALUE;
 
-          if (overs >= MIN_OVERS_FOR_ECONOMY && mRR > 0) {
-            const econ = rc / overs;
-            const phaseMult =
-              deathB > lballs * 0.4
-                ? DEATH_PHASE_MULTIPLIER
-                : MIDDLE_PHASE_MULTIPLIER;
-            bwlImpact +=
-              (mRR / Math.max(econ, 0.1)) * overs * ECONOMY_SCALE_FACTOR * phaseMult;
+          if (overs >= MIN_OVERS_FOR_ECONOMY) {
+            // Per-phase relative economy scoring (simplified — use match RR as proxy for phase econ)
+            const phases = [
+              { balls: Number(r.pp_balls ?? 0), runs: Number(r.pp_runs ?? 0), matchEcon: mRR * 0.95 },
+              { balls: Number(r.mid_balls ?? 0), runs: Number(r.mid_runs ?? 0), matchEcon: mRR * 0.85 },
+              { balls: Number(r.death_balls ?? 0), runs: Number(r.death_runs ?? 0), matchEcon: mRR * 1.35 },
+            ];
+            for (const ph of phases) {
+              if (ph.balls < 6) continue;
+              const phOvers = ph.balls / 6;
+              const phEcon = ph.runs / phOvers;
+              bwlImpact += (ph.matchEcon / Math.max(phEcon, PHASE_ECONOMY_FLOOR)) *
+                phOvers * ECONOMY_SCALE_FACTOR;
+            }
           }
         }
 
