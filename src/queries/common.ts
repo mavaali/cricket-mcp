@@ -114,7 +114,21 @@ export function buildMatchFilter(filters: MatchFilter): FilterResult {
   return { whereClauses: clauses, params };
 }
 
-export function buildWhereString(clauses: string[]): string {
-  if (clauses.length === 0) return "";
-  return "AND " + clauses.join(" AND ");
+/**
+ * Build a complete WHERE clause from filter conditions. Use when these filters
+ * are the ONLY conditions on the query (the common case). Returns "" for no
+ * conditions, which selects all rows — so no `WHERE 1=1` placeholder is needed.
+ */
+export function buildWhereClause(clauses: string[]): string {
+  return clauses.length > 0 ? "WHERE " + clauses.join(" AND ") : "";
+}
+
+/**
+ * Build an AND-prefixed fragment to append onto a query that ALREADY has a
+ * WHERE clause with its own condition(s), e.g.
+ *   `WHERE d.batter ILIKE $name ${buildAndClause(whereClauses)}`
+ * Returns "" when there are no filter conditions.
+ */
+export function buildAndClause(clauses: string[]): string {
+  return clauses.length > 0 ? "AND " + clauses.join(" AND ") : "";
 }

@@ -3,6 +3,20 @@ import path from "node:path";
 import { getConnection, closeConnection } from "../db/connection.js";
 import { migrateSchema } from "../db/schema.js";
 
+/**
+ * Guard for SQL identifiers (column names) that get string-interpolated into
+ * DDL/DML, since DuckDB does not accept bind parameters for identifiers.
+ * Today every interpolated identifier is a hardcoded constant, but this asserts
+ * the invariant so a future change that lets CSV-derived names flow in fails
+ * loudly instead of opening an injection hole.
+ */
+function assertSafeIdentifier(name: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Error(`Unsafe SQL identifier: ${JSON.stringify(name)}`);
+  }
+  return name;
+}
+
 export async function runEnrichment(options: {
   csvPath: string;
   dbPath: string;
@@ -25,12 +39,14 @@ export async function runEnrichment(options: {
   // Ensure new columns exist
   await migrateSchema(conn);
 
-  // Load CSV into temp table using DuckDB's native CSV reader
-  const escapedPath = csvAbsPath.replace(/'/g, "''");
-  await conn.run(`
-    CREATE TEMPORARY TABLE player_meta AS
-    SELECT * FROM read_csv_auto('${escapedPath}', header = true, all_varchar = true)
-  `);
+  // Load CSV into temp table using DuckDB's native CSV reader.
+  // The path is passed as a bind parameter (not string-interpolated) so a
+  // crafted --csv value cannot break out of the string literal into SQL.
+  await conn.run(
+    `CREATE TEMPORARY TABLE player_meta AS
+     SELECT * FROM read_csv_auto($csv_path, header = true, all_varchar = true)`,
+    { csv_path: csvAbsPath }
+  );
 
   // Detect the ID column
   const colResult = await conn.runAndReadAll(
@@ -49,6 +65,8 @@ export async function runEnrichment(options: {
         `Found columns: ${[...colNames].join(", ")}`
     );
   }
+  // Interpolated below (DuckDB has no bind params for identifiers); validate it.
+  assertSafeIdentifier(idColumn);
 
   // Detect available metadata columns
   const metaColumns = [
@@ -61,6 +79,8 @@ export async function runEnrichment(options: {
   const updateParts: string[] = [];
   for (const mc of metaColumns) {
     if (colNames.has(mc.csv)) {
+      assertSafeIdentifier(mc.db);
+      assertSafeIdentifier(mc.csv);
       updateParts.push(`${mc.db} = pm.${mc.csv}`);
     }
   }

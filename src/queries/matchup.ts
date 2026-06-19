@@ -1,4 +1,5 @@
-import { type MatchFilter, buildMatchFilter, buildWhereString, BOWLING_WICKET_KINDS } from "./common.js";
+import { BAT, BOWL } from "./innings.js";
+import { type MatchFilter, buildMatchFilter, buildWhereClause, BOWLING_WICKET_KINDS } from "./common.js";
 
 /**
  * Core matchup aggregation query. Groups deliveries by (batter, bowler) pair
@@ -20,7 +21,7 @@ export function buildMatchupQuery(options: {
   params.limit = options.limit;
 
   const allWhere = [...whereClauses, ...options.extraWhere];
-  const filterStr = buildWhereString(allWhere);
+  const filterStr = buildWhereClause(allWhere);
 
   // Determine grouping
   const groupBy = options.groupBy ?? "both";
@@ -58,8 +59,7 @@ export function buildMatchupQuery(options: {
         d.wicket_player_out
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
-      WHERE 1=1
-        ${filterStr}
+      ${filterStr}
     ),
     matchup_stats AS (
       SELECT
@@ -67,13 +67,13 @@ export function buildMatchupQuery(options: {
         ${selectBowler}
         COUNT(DISTINCT d.match_id) AS matches,
         COUNT(DISTINCT d.match_id || '-' || d.innings_number) AS innings,
-        COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls_faced,
+        ${BAT.ballsFaced} AS balls_faced,
         SUM(d.runs_batter) AS runs_scored,
-        SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
+        ${BOWL.runsConceded} AS runs_conceded,
         COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS dismissals,
         COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0) AS dot_balls,
-        COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours,
-        COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes,
+        ${BAT.fours} AS fours,
+        ${BAT.sixes} AS sixes,
         -- Dismissal type breakdown as JSON
         LIST(d.wicket_kind) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS dismissal_kinds
       FROM matchup_deliveries d

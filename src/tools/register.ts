@@ -28,10 +28,46 @@ import { registerStyleMatchup } from "./style-matchup.js";
 import { registerPlayerForm } from "./player-form.js";
 import { registerMatchImpact } from "./match-impact.js";
 
+/**
+ * Wrap every tool handler in a try/catch so a thrown error (lost DuckDB
+ * connection, query timeout, binder error) becomes a structured MCP error
+ * response instead of an unhandled rejection. Applied once at the registration
+ * boundary so all tools are covered uniformly without per-handler boilerplate.
+ */
+function withErrorHandling(server: McpServer): McpServer {
+  const original = server.registerTool.bind(server) as (
+    ...a: unknown[]
+  ) => unknown;
+  (server as unknown as { registerTool: unknown }).registerTool = (
+    name: string,
+    config: unknown,
+    handler: (...args: unknown[]) => Promise<unknown>
+  ) =>
+    original(name, config, async (...args: unknown[]) => {
+      try {
+        return await handler(...args);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[${name}] tool handler error:`, err);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error running ${name}: ${message}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    });
+  return server;
+}
+
 export function registerAllTools(
-  server: McpServer,
+  rawServer: McpServer,
   db: Promise<DuckDBConnection>
 ): void {
+  const server = withErrorHandling(rawServer);
   registerSearchPlayers(server, db);
   registerPlayerStats(server, db);
   registerSearchMatches(server, db);

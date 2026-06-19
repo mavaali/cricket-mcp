@@ -5,7 +5,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
   BOWLING_WICKET_KINDS,
 } from "../queries/common.js";
 
@@ -79,7 +79,7 @@ export function registerDismissalAnalysis(
         }
       }
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildWhereClause(whereClauses);
 
       const sql = `
         WITH dismissals AS (
@@ -88,8 +88,7 @@ export function registerDismissalAnalysis(
             COUNT(*) AS count
           FROM deliveries d
           JOIN matches m ON d.match_id = m.match_id
-          WHERE 1=1
-            ${filterStr}
+          ${filterStr}
           GROUP BY d.wicket_kind
         ),
         total AS (

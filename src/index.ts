@@ -130,4 +130,10 @@ program
     }
   });
 
-program.parse();
+// Use parseAsync so rejections from async command actions are awaited and
+// surfaced as a clean message + non-zero exit, instead of an unhandled
+// promise rejection (which prints a raw stack trace and may not set exit code).
+program.parseAsync().catch((err: unknown) => {
+  console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1);
+});

@@ -5,7 +5,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
 } from "../queries/common.js";
 
 export function registerTossAnalysis(
@@ -50,7 +50,7 @@ export function registerTossAnalysis(
       // Exclude matches without a decisive result
       whereClauses.push("m.outcome_winner IS NOT NULL");
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildWhereClause(whereClauses);
 
       const groupCol = group_by
         ? group_by === "team" ? "m.toss_winner" : `m.${group_by}`
@@ -92,8 +92,7 @@ export function registerTossAnalysis(
             )::DOUBLE / COUNT(*) * 100, 1
           ) AS bat_first_win_pct
         FROM matches m
-        WHERE 1=1
-          ${filterStr}
+        ${filterStr}
         ${groupByClause}
         ${orderByClause}
         LIMIT $limit

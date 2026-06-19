@@ -1,8 +1,9 @@
+import { BAT, BOWL } from "./innings.js";
 import {
   type MatchFilter,
   type CricketPhase,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
   BOWLING_WICKET_KINDS,
   PHASE_OVERS,
 } from "./common.js";
@@ -51,7 +52,7 @@ export function buildStyleMatchupQuery(options: {
   if (options.perspective === "batting") {
     // Batter vs bowling styles
     whereClauses.push("d.batter ILIKE '%' || $player_name || '%'");
-    const filterStr = buildWhereString(whereClauses);
+    const filterStr = buildWhereClause(whereClauses);
     const styleExpr = buildBowlingStyleExpr("bp", options.grouping);
 
     const sql = `
@@ -59,14 +60,14 @@ export function buildStyleMatchupQuery(options: {
         ${phaseSelect}
         ${styleExpr} AS style_group,
         COUNT(DISTINCT d.match_id || '-' || d.innings_number) AS innings,
-        COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls_faced,
+        ${BAT.ballsFaced} AS balls_faced,
         SUM(d.runs_batter) AS runs,
         COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter
           AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}
         ) AS dismissals,
         COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0) AS dot_balls,
-        COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours,
-        COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes,
+        ${BAT.fours} AS fours,
+        ${BAT.sixes} AS sixes,
         ROUND(
           CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter
             AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) > 0
@@ -75,30 +76,29 @@ export function buildStyleMatchupQuery(options: {
           ELSE NULL END, 2
         ) AS average,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.extras_wides = 0) > 0
-          THEN SUM(d.runs_batter)::DOUBLE / COUNT(*) FILTER (WHERE d.extras_wides = 0) * 100
+          CASE WHEN ${BAT.ballsFaced} > 0
+          THEN SUM(d.runs_batter)::DOUBLE / ${BAT.ballsFaced} * 100
           ELSE NULL END, 2
         ) AS strike_rate,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.extras_wides = 0) > 0
+          CASE WHEN ${BAT.ballsFaced} > 0
           THEN COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0)::DOUBLE
-               / COUNT(*) FILTER (WHERE d.extras_wides = 0) * 100
+               / ${BAT.ballsFaced} * 100
           ELSE NULL END, 2
         ) AS dot_ball_pct,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.extras_wides = 0) > 0
-          THEN (COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary)
-              + COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary))::DOUBLE
-              / COUNT(*) FILTER (WHERE d.extras_wides = 0) * 100
+          CASE WHEN ${BAT.ballsFaced} > 0
+          THEN (${BAT.fours}
+              + ${BAT.sixes})::DOUBLE
+              / ${BAT.ballsFaced} * 100
           ELSE NULL END, 2
         ) AS boundary_pct
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
       LEFT JOIN players bp ON d.bowler_id = bp.player_id
-      WHERE 1=1
-        ${filterStr}
+      ${filterStr}
       GROUP BY ${phaseGroupBy} style_group
-      HAVING COUNT(*) FILTER (WHERE d.extras_wides = 0) >= $min_balls
+      HAVING ${BAT.ballsFaced} >= $min_balls
       ORDER BY ${phaseOrderPrefix} balls_faced DESC
       LIMIT $limit
     `;
@@ -107,48 +107,47 @@ export function buildStyleMatchupQuery(options: {
   } else {
     // Bowler vs batting styles
     whereClauses.push("d.bowler ILIKE '%' || $player_name || '%'");
-    const filterStr = buildWhereString(whereClauses);
+    const filterStr = buildWhereClause(whereClauses);
 
     const sql = `
       SELECT
         ${phaseSelect}
         COALESCE(bp.batting_style, 'Unknown') AS style_group,
         COUNT(DISTINCT d.match_id || '-' || d.innings_number) AS innings,
-        COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS balls_bowled,
-        SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-        COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
-        COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dot_balls,
+        ${BOWL.legalBalls} AS balls_bowled,
+        ${BOWL.runsConceded} AS runs_conceded,
+        ${BOWL.wickets} AS wickets,
+        ${BOWL.dots} AS dot_balls,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) > 0
-          THEN SUM(d.runs_total - d.extras_byes - d.extras_legbyes)::DOUBLE
-               / COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS})
+          CASE WHEN ${BOWL.wickets} > 0
+          THEN ${BOWL.runsConceded}::DOUBLE
+               / ${BOWL.wickets}
           ELSE NULL END, 2
         ) AS average,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) > 0
-          THEN SUM(d.runs_total - d.extras_byes - d.extras_legbyes)::DOUBLE
-               / (COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0)::DOUBLE / 6)
+          CASE WHEN ${BOWL.legalBalls} > 0
+          THEN ${BOWL.runsConceded}::DOUBLE
+               / (${BOWL.legalBalls}::DOUBLE / 6)
           ELSE NULL END, 2
         ) AS economy,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) > 0
-          THEN COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0)::DOUBLE
-               / COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS})
+          CASE WHEN ${BOWL.wickets} > 0
+          THEN ${BOWL.legalBalls}::DOUBLE
+               / ${BOWL.wickets}
           ELSE NULL END, 2
         ) AS bowling_strike_rate,
         ROUND(
-          CASE WHEN COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) > 0
-          THEN COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0)::DOUBLE
-               / COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) * 100
+          CASE WHEN ${BOWL.legalBalls} > 0
+          THEN ${BOWL.dots}::DOUBLE
+               / ${BOWL.legalBalls} * 100
           ELSE NULL END, 2
         ) AS dot_ball_pct
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
       LEFT JOIN players bp ON d.batter_id = bp.player_id
-      WHERE 1=1
-        ${filterStr}
+      ${filterStr}
       GROUP BY ${phaseGroupBy} style_group
-      HAVING COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) >= $min_balls
+      HAVING ${BOWL.legalBalls} >= $min_balls
       ORDER BY ${phaseOrderPrefix} balls_bowled DESC
       LIMIT $limit
     `;

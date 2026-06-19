@@ -5,7 +5,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildAndClause,
 } from "../queries/common.js";
 
 export function registerFieldingStats(
@@ -68,7 +68,7 @@ export function registerFieldingStats(
       params.min_matches = min_matches;
       params.limit = limit;
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildAndClause(whereClauses);
 
       const orderBy = {
         catches: "catches DESC",

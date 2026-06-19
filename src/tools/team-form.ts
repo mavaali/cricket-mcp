@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -5,7 +6,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
 } from "../queries/common.js";
 
 export function registerTeamForm(
@@ -44,7 +45,7 @@ export function registerTeamForm(
       params.last_n = last_n_matches;
 
       whereClauses.push("(m.team1 = $team_name OR m.team2 = $team_name)");
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildWhereClause(whereClauses);
 
       // Get the recent match results
       const resultsSql = `
@@ -74,8 +75,7 @@ export function registerTeamForm(
               ELSE m.team1
             END AS opponent
           FROM matches m
-          WHERE 1=1
-            ${filterStr}
+          ${filterStr}
           ORDER BY m.date_start DESC
           LIMIT $last_n
         )
@@ -101,8 +101,7 @@ export function registerTeamForm(
               ELSE 'NR'
             END AS result
           FROM matches m
-          WHERE 1=1
-            ${filterStr}
+          ${filterStr}
           ORDER BY m.date_start DESC
           LIMIT $last_n
         ),
@@ -112,7 +111,7 @@ export function registerTeamForm(
             i.innings_number,
             i.batting_team,
             SUM(d.runs_total) AS total_runs,
-            COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
+            ${BOWL.legalBalls} AS legal_balls,
             COUNT(*) FILTER (WHERE d.is_wicket) AS wickets
           FROM deliveries d
           JOIN innings i ON d.match_id = i.match_id AND d.innings_number = i.innings_number
