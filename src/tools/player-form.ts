@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -5,7 +6,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
   BOWLING_WICKET_KINDS,
 } from "../queries/common.js";
 
@@ -54,7 +55,7 @@ export function registerPlayerForm(
 
       if (perspective === "batting") {
         whereClauses.push("d.batter ILIKE '%' || $player_name || '%'");
-        const filterStr = buildWhereString(whereClauses);
+        const filterStr = buildWhereClause(whereClauses);
 
         const sql = `
           WITH batting_innings AS (
@@ -73,16 +74,15 @@ export function registerPlayerForm(
                 'Unknown'
               ) AS opposition,
               SUM(d.runs_batter) AS runs,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls,
+              ${BAT.ballsFaced} AS balls,
               COUNT(*) FILTER (WHERE d.runs_batter = 4 AND d.runs_non_boundary = FALSE) AS fours,
               COUNT(*) FILTER (WHERE d.runs_batter = 6) AS sixes,
-              MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed,
+              ${BAT.wasDismissed} AS was_dismissed,
               MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN d.wicket_kind ELSE NULL END) AS how_out,
               MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN d.bowler ELSE NULL END) AS dismissed_by
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
-            WHERE 1=1
-              ${filterStr}
+            ${filterStr}
             GROUP BY d.batter, d.batter_id, d.match_id, d.innings_number,
                      m.date_start, m.match_type, m.venue, m.event_name
             ORDER BY m.date_start DESC, d.match_id DESC, d.innings_number DESC
@@ -167,7 +167,7 @@ export function registerPlayerForm(
       } else {
         // Bowling perspective
         whereClauses.push("d.bowler ILIKE '%' || $player_name || '%'");
-        const filterStr = buildWhereString(whereClauses);
+        const filterStr = buildWhereClause(whereClauses);
 
         const sql = `
           WITH bowling_innings AS (
@@ -185,14 +185,13 @@ export function registerPlayerForm(
                  WHERE i.match_id = d.match_id AND i.innings_number = d.innings_number),
                 'Unknown'
               ) AS opposition,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
-              SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
+              ${BOWL.legalBalls} AS legal_balls,
+              ${BOWL.runsConceded} AS runs_conceded,
+              ${BOWL.wickets} AS wickets,
               COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dot_balls
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
-            WHERE 1=1
-              ${filterStr}
+            ${filterStr}
             GROUP BY d.bowler, d.bowler_id, d.match_id, d.innings_number,
                      m.date_start, m.match_type, m.venue, m.event_name
             ORDER BY m.date_start DESC, d.match_id DESC, d.innings_number DESC

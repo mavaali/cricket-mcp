@@ -1,4 +1,5 @@
-import { type MatchFilter, buildMatchFilter, buildWhereString, BOWLING_WICKET_KINDS } from "./common.js";
+import { BAT, BOWL } from "./innings.js";
+import { type MatchFilter, buildMatchFilter, buildWhereClause, buildAndClause, BOWLING_WICKET_KINDS } from "./common.js";
 
 export function buildBowlingStatsQuery(
   playerName: string,
@@ -6,7 +7,7 @@ export function buildBowlingStatsQuery(
 ): { sql: string; params: Record<string, string | number> } {
   const { whereClauses, params } = buildMatchFilter(filters);
   params.player_name = playerName;
-  const filterStr = buildWhereString(whereClauses);
+  const filterStr = buildAndClause(whereClauses);
 
   const sql = `
     WITH bowling_innings AS (
@@ -15,10 +16,10 @@ export function buildBowlingStatsQuery(
         d.bowler_id,
         d.match_id,
         d.innings_number,
-        COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
-        SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-        COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
-        COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dots
+        ${BOWL.legalBalls} AS legal_balls,
+        ${BOWL.runsConceded} AS runs_conceded,
+        ${BOWL.wickets} AS wickets,
+        ${BOWL.dots} AS dots
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
       WHERE d.bowler ILIKE '%' || $player_name || '%'
@@ -31,7 +32,7 @@ export function buildBowlingStatsQuery(
         d.match_id,
         d.innings_number,
         d.over_number,
-        SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS over_runs
+        ${BOWL.runsConceded} AS over_runs
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
       WHERE d.bowler ILIKE '%' || $player_name || '%'
@@ -97,7 +98,7 @@ export function buildBowlingRecordsQuery(
   const { whereClauses, params } = buildMatchFilter(filters);
   params.min_innings = minInnings;
   params.limit = limit;
-  const filterStr = buildWhereString(whereClauses);
+  const whereSql = buildWhereClause(whereClauses);
 
   let orderBy: string;
   switch (recordType) {
@@ -127,14 +128,13 @@ export function buildBowlingRecordsQuery(
         d.bowler_id,
         d.match_id,
         d.innings_number,
-        COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
-        SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-        COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
-        COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dots
+        ${BOWL.legalBalls} AS legal_balls,
+        ${BOWL.runsConceded} AS runs_conceded,
+        ${BOWL.wickets} AS wickets,
+        ${BOWL.dots} AS dots
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
-      WHERE 1=1
-        ${filterStr}
+      ${whereSql}
       GROUP BY d.bowler, d.bowler_id, d.match_id, d.innings_number
     ),
     best_figures AS (

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
-import { MatchFilterSchema, buildMatchFilter, buildWhereString } from "../queries/common.js";
+import { MatchFilterSchema, buildMatchFilter, buildWhereClause } from "../queries/common.js";
 
 export function registerSearchMatches(
   server: McpServer,
@@ -40,8 +40,7 @@ export function registerSearchMatches(
       params.limit = limit;
       params.offset = offset;
 
-      const whereStr =
-        whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : "";
+      const whereStr = buildWhereClause(whereClauses);
 
       const sql = `
         SELECT

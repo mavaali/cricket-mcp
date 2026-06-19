@@ -1,4 +1,5 @@
-import { type MatchFilter, buildMatchFilter, buildWhereString } from "./common.js";
+import { BAT, BOWL } from "./innings.js";
+import { type MatchFilter, buildMatchFilter, buildWhereClause, buildAndClause } from "./common.js";
 
 export function buildBattingStatsQuery(
   playerName: string,
@@ -6,7 +7,7 @@ export function buildBattingStatsQuery(
 ): { sql: string; params: Record<string, string | number> } {
   const { whereClauses, params } = buildMatchFilter(filters);
   params.player_name = playerName;
-  const filterStr = buildWhereString(whereClauses);
+  const filterStr = buildAndClause(whereClauses);
 
   const sql = `
     WITH innings_scores AS (
@@ -19,10 +20,10 @@ export function buildBattingStatsQuery(
         m.date_start,
         m.venue,
         SUM(d.runs_batter) AS innings_runs,
-        COUNT(*) FILTER (WHERE d.extras_wides = 0) AS innings_balls,
-        COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS innings_fours,
-        COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS innings_sixes,
-        MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed
+        ${BAT.ballsFaced} AS innings_balls,
+        ${BAT.fours} AS innings_fours,
+        ${BAT.sixes} AS innings_sixes,
+        ${BAT.wasDismissed} AS was_dismissed
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
       WHERE d.batter ILIKE '%' || $player_name || '%'
@@ -74,7 +75,7 @@ export function buildBattingRecordsQuery(
   const { whereClauses, params } = buildMatchFilter(filters);
   params.min_innings = minInnings;
   params.limit = limit;
-  const filterStr = buildWhereString(whereClauses);
+  const whereSql = buildWhereClause(whereClauses);
 
   let orderBy: string;
   switch (recordType) {
@@ -114,14 +115,13 @@ export function buildBattingRecordsQuery(
         d.match_id,
         d.innings_number,
         SUM(d.runs_batter) AS innings_runs,
-        COUNT(*) FILTER (WHERE d.extras_wides = 0) AS innings_balls,
-        COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS innings_fours,
-        COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS innings_sixes,
-        MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed
+        ${BAT.ballsFaced} AS innings_balls,
+        ${BAT.fours} AS innings_fours,
+        ${BAT.sixes} AS innings_sixes,
+        ${BAT.wasDismissed} AS was_dismissed
       FROM deliveries d
       JOIN matches m ON d.match_id = m.match_id
-      WHERE 1=1
-        ${filterStr}
+      ${whereSql}
       GROUP BY d.batter, d.batter_id, d.match_id, d.innings_number
     )
     SELECT

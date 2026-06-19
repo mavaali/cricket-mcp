@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
-import { MatchFilterSchema, buildMatchFilter, buildWhereString } from "../queries/common.js";
+import { MatchFilterSchema, buildMatchFilter, buildWhereClause } from "../queries/common.js";
 
 export function registerPartnerships(
   server: McpServer,
@@ -49,7 +49,7 @@ export function registerPartnerships(
         params.player_name = player_name;
       }
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildWhereClause(whereClauses);
 
       const sql = `
         WITH batting_pairs AS (
@@ -66,8 +66,7 @@ export function registerPartnerships(
             m.event_name
           FROM deliveries d
           JOIN matches m ON d.match_id = m.match_id
-          WHERE 1=1
-            ${filterStr}
+          ${filterStr}
         ),
         partnerships AS (
           SELECT

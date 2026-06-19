@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
-import { MatchFilterSchema, buildMatchFilter, buildWhereString } from "../queries/common.js";
+import { MatchFilterSchema, buildMatchFilter, buildAndClause } from "../queries/common.js";
 
 export function registerHeadToHead(
   server: McpServer,
@@ -33,7 +33,7 @@ export function registerHeadToHead(
       const { whereClauses, params } = buildMatchFilter(filters);
       params.team1 = team1;
       params.team2 = team2;
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildAndClause(whereClauses);
 
       const sql = `
         SELECT

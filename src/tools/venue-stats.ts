@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
-import { MatchFilterSchema, buildMatchFilter, buildWhereString } from "../queries/common.js";
+import { MatchFilterSchema, buildMatchFilter, buildAndClause } from "../queries/common.js";
 
 export function registerVenueStats(
   server: McpServer,
@@ -46,7 +46,7 @@ export function registerVenueStats(
         params.venue_filter = venue;
       }
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildAndClause(whereClauses);
 
       const sql = `
         WITH innings_totals AS (

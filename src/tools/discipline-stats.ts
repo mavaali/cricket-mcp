@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -5,7 +6,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
   PHASE_OVERS,
 } from "../queries/common.js";
 
@@ -90,7 +91,7 @@ export function registerDisciplineStats(
         params.player_name = player_name;
       }
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildWhereClause(whereClauses);
 
       if (perspective === "bowling") {
         const orderBy = {
@@ -106,17 +107,17 @@ export function registerDisciplineStats(
             d.bowler_id AS player_id,
             COUNT(DISTINCT d.match_id) AS matches,
             COUNT(*) AS total_deliveries,
-            COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
-            SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-            COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dot_balls,
+            ${BOWL.legalBalls} AS legal_balls,
+            ${BOWL.runsConceded} AS runs_conceded,
+            ${BOWL.dots} AS dot_balls,
             SUM(d.extras_wides) AS total_wides,
             SUM(d.extras_noballs) AS total_noballs,
             SUM(d.extras_wides + d.extras_noballs) AS total_extras_given,
-            COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours_conceded,
-            COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes_conceded,
+            ${BAT.fours} AS fours_conceded,
+            ${BAT.sixes} AS sixes_conceded,
             ROUND(
-              COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0)::DOUBLE /
-              NULLIF(COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0), 0) * 100, 2
+              ${BOWL.dots}::DOUBLE /
+              NULLIF(${BOWL.legalBalls}, 0) * 100, 2
             ) AS dot_ball_pct,
             ROUND(
               SUM(d.extras_wides)::DOUBLE /
@@ -128,19 +129,18 @@ export function registerDisciplineStats(
             ) AS noball_pct,
             ROUND(
               SUM(d.extras_wides + d.extras_noballs)::DOUBLE /
-              (COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0)::DOUBLE / 6), 2
+              (${BOWL.legalBalls}::DOUBLE / 6), 2
             ) AS extras_per_over,
             ROUND(
-              (COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) +
-               COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary))::DOUBLE /
-              NULLIF(COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0), 0) * 100, 2
+              (${BAT.fours} +
+               ${BAT.sixes})::DOUBLE /
+              NULLIF(${BOWL.legalBalls}, 0) * 100, 2
             ) AS boundary_pct
           FROM deliveries d
           JOIN matches m ON d.match_id = m.match_id
-          WHERE 1=1
-            ${filterStr}
+          ${filterStr}
           GROUP BY d.bowler, d.bowler_id
-          HAVING COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) >= $min_balls
+          HAVING ${BOWL.legalBalls} >= $min_balls
           ORDER BY ${orderBy}
           LIMIT $limit
         `;
@@ -168,30 +168,29 @@ export function registerDisciplineStats(
             d.batter AS player_name,
             d.batter_id AS player_id,
             COUNT(DISTINCT d.match_id) AS matches,
-            COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls_faced,
+            ${BAT.ballsFaced} AS balls_faced,
             SUM(d.runs_batter) AS runs,
             COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0) AS dot_balls,
-            COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours,
-            COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes,
+            ${BAT.fours} AS fours,
+            ${BAT.sixes} AS sixes,
             ROUND(
               COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0)::DOUBLE /
-              NULLIF(COUNT(*) FILTER (WHERE d.extras_wides = 0), 0) * 100, 2
+              NULLIF(${BAT.ballsFaced}, 0) * 100, 2
             ) AS dot_ball_pct,
             ROUND(
-              (COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) +
-               COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary))::DOUBLE /
-              NULLIF(COUNT(*) FILTER (WHERE d.extras_wides = 0), 0) * 100, 2
+              (${BAT.fours} +
+               ${BAT.sixes})::DOUBLE /
+              NULLIF(${BAT.ballsFaced}, 0) * 100, 2
             ) AS boundary_pct,
             ROUND(
               SUM(d.runs_batter)::DOUBLE /
-              NULLIF(COUNT(*) FILTER (WHERE d.extras_wides = 0), 0) * 100, 2
+              NULLIF(${BAT.ballsFaced}, 0) * 100, 2
             ) AS strike_rate
           FROM deliveries d
           JOIN matches m ON d.match_id = m.match_id
-          WHERE 1=1
-            ${filterStr}
+          ${filterStr}
           GROUP BY d.batter, d.batter_id
-          HAVING COUNT(*) FILTER (WHERE d.extras_wides = 0) >= $min_balls
+          HAVING ${BAT.ballsFaced} >= $min_balls
           ORDER BY ${orderBy}
           LIMIT $limit
         `;

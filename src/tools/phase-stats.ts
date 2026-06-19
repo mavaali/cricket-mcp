@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -5,7 +6,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
   PHASE_OVERS,
   BOWLING_WICKET_KINDS,
 } from "../queries/common.js";
@@ -88,7 +89,7 @@ export function registerPhaseStats(
         params.player_name = player_name;
       }
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildWhereClause(whereClauses);
 
       if (perspective === "batting") {
         const orderBy = {
@@ -108,15 +109,14 @@ export function registerPhaseStats(
               d.match_id,
               d.innings_number,
               SUM(d.runs_batter) AS innings_runs,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0) AS innings_balls,
+              ${BAT.ballsFaced} AS innings_balls,
               COUNT(*) FILTER (WHERE d.runs_batter = 0 AND d.extras_wides = 0) AS innings_dots,
-              COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS innings_fours,
-              COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS innings_sixes,
-              MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed
+              ${BAT.fours} AS innings_fours,
+              ${BAT.sixes} AS innings_sixes,
+              ${BAT.wasDismissed} AS was_dismissed
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
-            WHERE 1=1
-              ${filterStr}
+            ${filterStr}
             GROUP BY d.batter, d.batter_id, d.match_id, d.innings_number
           )
           SELECT
@@ -184,16 +184,15 @@ export function registerPhaseStats(
               d.bowler_id AS player_id,
               d.match_id,
               d.innings_number,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
-              SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
-              COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
-              COUNT(*) FILTER (WHERE d.runs_total = 0 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS dots,
-              COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours_conceded,
-              COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes_conceded
+              ${BOWL.legalBalls} AS legal_balls,
+              ${BOWL.runsConceded} AS runs_conceded,
+              ${BOWL.wickets} AS wickets,
+              ${BOWL.dots} AS dots,
+              ${BAT.fours} AS fours_conceded,
+              ${BAT.sixes} AS sixes_conceded
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
-            WHERE 1=1
-              ${filterStr}
+            ${filterStr}
             GROUP BY d.bowler, d.bowler_id, d.match_id, d.innings_number
           )
           SELECT

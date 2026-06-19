@@ -8,6 +8,26 @@ export interface OneLakeConfig {
 const TABLES = ["players", "matches", "innings", "deliveries"];
 
 /**
+ * OneLake identifiers (workspace/lakehouse IDs, table names) are interpolated
+ * into delta_scan() paths and CREATE VIEW statements. DuckDB does not accept
+ * bind parameters for table-function paths or identifiers, so we validate the
+ * inputs instead. Fabric workspace and lakehouse IDs are GUIDs; this pattern
+ * also tolerates friendly names while rejecting quotes, whitespace, slashes,
+ * and statement separators that could break out of the SQL string.
+ */
+const SAFE_ONELAKE_ID = /^[A-Za-z0-9._-]+$/;
+
+function assertSafeOneLakeId(label: string, value: string): string {
+  if (!SAFE_ONELAKE_ID.test(value)) {
+    throw new Error(
+      `Invalid ${label}: ${JSON.stringify(value)}. ` +
+        `Expected only letters, digits, '.', '_', or '-'.`
+    );
+  }
+  return value;
+}
+
+/**
  * Create a DuckDB connection that reads Delta tables from OneLake.
  *
  * Uses the delta and azure extensions to read Delta Lake tables directly
@@ -42,9 +62,13 @@ export async function getOneLakeConnection(
 
   // Create views over OneLake Delta tables
   // OneLake path format: abfss://{workspaceId}@onelake.dfs.fabric.microsoft.com/{lakehouseId}/Tables/{tableName}
-  const baseUrl = `abfss://${config.workspaceId}@onelake.dfs.fabric.microsoft.com/${config.lakehouseId}/Tables`;
+  const workspaceId = assertSafeOneLakeId("workspaceId", config.workspaceId);
+  const lakehouseId = assertSafeOneLakeId("lakehouseId", config.lakehouseId);
+  const baseUrl = `abfss://${workspaceId}@onelake.dfs.fabric.microsoft.com/${lakehouseId}/Tables`;
 
   for (const table of TABLES) {
+    // TABLES is a hardcoded allowlist; validated for defense-in-depth.
+    assertSafeOneLakeId("table", table);
     const deltaPath = `${baseUrl}/${table}`;
     await conn.run(
       `CREATE VIEW ${table} AS SELECT * FROM delta_scan('${deltaPath}')`

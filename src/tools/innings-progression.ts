@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -68,12 +69,12 @@ export function registerInningsProgression(
           SUM(COUNT(*) FILTER (WHERE d.is_wicket)) OVER (ORDER BY d.over_number) AS cumulative_wickets,
           ROUND(
             SUM(d.runs_total)::DOUBLE /
-            NULLIF(COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0), 0) * 6,
+            NULLIF(${BOWL.legalBalls}, 0) * 6,
             2
           ) AS run_rate_this_over,
           ROUND(
             SUM(SUM(d.runs_total)) OVER (ORDER BY d.over_number)::DOUBLE /
-            (SUM(COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0)) OVER (ORDER BY d.over_number)::DOUBLE / 6),
+            (SUM(${BOWL.legalBalls}) OVER (ORDER BY d.over_number)::DOUBLE / 6),
             2
           ) AS cumulative_run_rate,
           STRING_AGG(

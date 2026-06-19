@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -5,7 +6,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildAndClause,
 } from "../queries/common.js";
 
 export function registerSituationalStats(
@@ -158,7 +159,7 @@ export function registerSituationalStats(
           break;
       }
 
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildAndClause(whereClauses);
 
       const orderBy = {
         runs: "runs DESC",
@@ -187,10 +188,10 @@ export function registerSituationalStats(
               d.match_id,
               d.innings_number,
               SUM(d.runs_batter) AS innings_runs,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0) AS innings_balls,
-              COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS innings_fours,
-              COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS innings_sixes,
-              MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed
+              ${BAT.ballsFaced} AS innings_balls,
+              ${BAT.fours} AS innings_fours,
+              ${BAT.sixes} AS innings_sixes,
+              ${BAT.wasDismissed} AS was_dismissed
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
             JOIN wickets_in_powerplay wp ON d.match_id = wp.match_id AND d.innings_number = wp.innings_number
@@ -244,10 +245,10 @@ export function registerSituationalStats(
               d.match_id,
               d.innings_number,
               SUM(d.runs_batter) AS innings_runs,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0) AS innings_balls,
-              COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS innings_fours,
-              COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS innings_sixes,
-              MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed
+              ${BAT.ballsFaced} AS innings_balls,
+              ${BAT.fours} AS innings_fours,
+              ${BAT.sixes} AS innings_sixes,
+              ${BAT.wasDismissed} AS was_dismissed
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
             JOIN batter_order bo ON d.match_id = bo.match_id
@@ -294,10 +295,10 @@ export function registerSituationalStats(
               d.match_id,
               d.innings_number,
               SUM(d.runs_batter) AS innings_runs,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0) AS innings_balls,
-              COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS innings_fours,
-              COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS innings_sixes,
-              MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed
+              ${BAT.ballsFaced} AS innings_balls,
+              ${BAT.fours} AS innings_fours,
+              ${BAT.sixes} AS innings_sixes,
+              ${BAT.wasDismissed} AS was_dismissed
             FROM deliveries d
             JOIN matches m ON d.match_id = m.match_id
             WHERE 1=1

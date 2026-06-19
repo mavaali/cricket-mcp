@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -5,7 +6,7 @@ import { runQuery } from "../queries/run.js";
 import {
   MatchFilterSchema,
   buildMatchFilter,
-  buildWhereString,
+  buildWhereClause,
   BOWLING_WICKET_KINDS,
 } from "../queries/common.js";
 
@@ -181,7 +182,7 @@ export function registerMatchImpact(
            i.bowling_team,
            i.target_runs,
            SUM(d.runs_total) AS team_total,
-           COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS team_balls
+           ${BOWL.legalBalls} AS team_balls
          FROM deliveries d
          JOIN innings i ON d.match_id = i.match_id AND d.innings_number = i.innings_number
          WHERE d.match_id = $match_id AND i.is_super_over = FALSE
@@ -250,10 +251,10 @@ export function registerMatchImpact(
            d.batter_id AS player_id,
            d.innings_number,
            SUM(d.runs_batter) AS runs,
-           COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls_faced,
+           ${BAT.ballsFaced} AS balls_faced,
            COUNT(*) FILTER (WHERE d.runs_batter = 4 AND d.runs_non_boundary = FALSE) AS fours,
            COUNT(*) FILTER (WHERE d.runs_batter = 6) AS sixes,
-           MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed,
+           ${BAT.wasDismissed} AS was_dismissed,
            COALESCE(we.wickets_down, 0) AS wickets_at_entry,
            -- Phase breakdown for death-over SR bonus
            SUM(CASE WHEN d.over_number <= 5 THEN d.runs_batter ELSE 0 END) AS pp_runs,
@@ -510,8 +511,8 @@ export function registerMatchImpact(
            d.bowler AS player_name,
            d.bowler_id AS player_id,
            d.innings_number,
-           COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls,
-           SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs_conceded,
+           ${BOWL.legalBalls} AS legal_balls,
+           ${BOWL.runsConceded} AS runs_conceded,
            -- Phase breakdown for phase multiplier
            COUNT(*) FILTER (WHERE d.over_number <= 5 AND d.extras_wides = 0 AND d.extras_noballs = 0) AS pp_balls,
            SUM(CASE WHEN d.over_number <= 5 THEN d.runs_total - d.extras_byes - d.extras_legbyes ELSE 0 END) AS pp_runs,
@@ -793,7 +794,7 @@ export function registerMatchImpact(
              OR bowler ILIKE '%' || $player_name || '%'
         )`
       );
-      const filterStr = buildWhereString(whereClauses);
+      const filterStr = buildWhereClause(whereClauses);
 
       const matchListRows = await runQuery(
         db,
@@ -801,7 +802,7 @@ export function registerMatchImpact(
                 m.event_name, m.event_stage, m.match_type,
                 m.outcome_winner, m.outcome_by_runs, m.outcome_by_wickets, m.outcome_result
          FROM matches m
-         WHERE 1=1 ${filterStr}
+         ${filterStr}
          ORDER BY m.date_start DESC
          LIMIT $limit`,
         params
@@ -867,7 +868,7 @@ export function registerMatchImpact(
           db,
           `SELECT innings_number, i.batting_team, i.target_runs,
                   SUM(d.runs_total) AS team_total,
-                  COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS team_balls
+                  ${BOWL.legalBalls} AS team_balls
            FROM deliveries d
            JOIN innings i ON d.match_id = i.match_id AND d.innings_number = i.innings_number
            WHERE d.match_id = $mid AND i.is_super_over = FALSE

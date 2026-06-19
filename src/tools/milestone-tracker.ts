@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -83,7 +84,7 @@ export function registerMilestoneTracker(
                 d.match_id,
                 d.innings_number,
                 SUM(d.runs_batter) AS innings_runs,
-                MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter THEN 1 ELSE 0 END) AS was_dismissed
+                ${BAT.wasDismissed} AS was_dismissed
               FROM deliveries d
               JOIN matches m ON d.match_id = m.match_id
               WHERE 1=1 ${matchTypeFilter} ${genderFilter}
@@ -129,7 +130,7 @@ export function registerMilestoneTracker(
                 d.bowler_id AS player_id,
                 d.match_id,
                 d.innings_number,
-                COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets
+                ${BOWL.wickets} AS wickets
               FROM deliveries d
               JOIN matches m ON d.match_id = m.match_id
               WHERE 1=1 ${matchTypeFilter} ${genderFilter}

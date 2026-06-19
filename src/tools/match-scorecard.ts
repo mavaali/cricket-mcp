@@ -1,3 +1,4 @@
+import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
@@ -53,20 +54,24 @@ export function registerMatchScorecard(
           SELECT
             d.batter AS player_name,
             SUM(d.runs_batter) AS runs,
-            COUNT(*) FILTER (WHERE d.extras_wides = 0) AS balls,
-            COUNT(*) FILTER (WHERE d.runs_batter = 4 AND NOT d.runs_non_boundary) AS fours,
-            COUNT(*) FILTER (WHERE d.runs_batter = 6 AND NOT d.runs_non_boundary) AS sixes,
+            ${BAT.ballsFaced} AS balls,
+            ${BAT.fours} AS fours,
+            ${BAT.sixes} AS sixes,
             ROUND(
-              CASE WHEN COUNT(*) FILTER (WHERE d.extras_wides = 0) > 0
-              THEN SUM(d.runs_batter)::DOUBLE / COUNT(*) FILTER (WHERE d.extras_wides = 0) * 100
+              CASE WHEN ${BAT.ballsFaced} > 0
+              THEN SUM(d.runs_batter)::DOUBLE / ${BAT.ballsFaced} * 100
               ELSE 0 END, 2
             ) AS strike_rate,
-            MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter
-              THEN d.wicket_kind ELSE NULL END) AS dismissal,
-            MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter
-              THEN d.wicket_fielder1 ELSE NULL END) AS fielder,
-            MAX(CASE WHEN d.is_wicket AND d.wicket_player_out = d.batter
-              THEN d.bowler ELSE NULL END) AS dismissed_by
+            -- Dismissal: a batter is out at most once per innings, but pull all
+            -- three fields from the SAME delivery row (arg_max on a stable ball
+            -- key) so they can never tear across rows if the data ever carries
+            -- more than one dismissal row for a batter (e.g. a multi-wicket ball).
+            arg_max(d.wicket_kind, d.over_number * 100 + d.ball_number)
+              FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter) AS dismissal,
+            arg_max(d.wicket_fielder1, d.over_number * 100 + d.ball_number)
+              FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter) AS fielder,
+            arg_max(d.bowler, d.over_number * 100 + d.ball_number)
+              FILTER (WHERE d.is_wicket AND d.wicket_player_out = d.batter) AS dismissed_by
           FROM deliveries d
           WHERE d.match_id = $match_id AND d.innings_number = $innings
           GROUP BY d.batter
@@ -79,8 +84,8 @@ export function registerMatchScorecard(
             SELECT
               d.bowler,
               d.over_number,
-              SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS over_runs,
-              COUNT(*) FILTER (WHERE d.extras_wides = 0 AND d.extras_noballs = 0) AS legal_balls
+              ${BOWL.runsConceded} AS over_runs,
+              ${BOWL.legalBalls} AS legal_balls
             FROM deliveries d
             WHERE d.match_id = $match_id AND d.innings_number = $innings
             GROUP BY d.bowler, d.over_number
@@ -93,11 +98,11 @@ export function registerMatchScorecard(
               AS overs,
             (SELECT COUNT(*) FROM bowler_overs bo WHERE bo.bowler = d.bowler AND bo.over_runs = 0
               AND bo.legal_balls >= 6) AS maidens,
-            SUM(d.runs_total - d.extras_byes - d.extras_legbyes) AS runs,
-            COUNT(*) FILTER (WHERE d.is_wicket AND d.wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
+            ${BOWL.runsConceded} AS runs,
+            ${BOWL.wickets} AS wickets,
             ROUND(
               CASE WHEN SUM(CASE WHEN d.extras_wides = 0 AND d.extras_noballs = 0 THEN 1 ELSE 0 END) > 0
-              THEN SUM(d.runs_total - d.extras_byes - d.extras_legbyes)::DOUBLE /
+              THEN ${BOWL.runsConceded}::DOUBLE /
                 (SUM(CASE WHEN d.extras_wides = 0 AND d.extras_noballs = 0 THEN 1 ELSE 0 END)::DOUBLE / 6)
               ELSE NULL END, 2
             ) AS economy
