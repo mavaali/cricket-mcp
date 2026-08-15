@@ -27,6 +27,11 @@ import { registerInningsProgression } from "./innings-progression.js";
 import { registerStyleMatchup } from "./style-matchup.js";
 import { registerPlayerForm } from "./player-form.js";
 import { registerMatchImpact } from "./match-impact.js";
+import { registerInningsRecords } from "./innings-records.js";
+import { registerTeamRecords } from "./team-records.js";
+import { registerClutchPerformance } from "./clutch-performance.js";
+import { registerSuperOvers } from "./super-overs.js";
+import { registerStreaks } from "./streaks.js";
 
 /**
  * Wrap every tool handler in a try/catch so a thrown error (lost DuckDB
@@ -95,4 +100,9 @@ export function registerAllTools(
   registerStyleMatchup(server, db);
   registerPlayerForm(server, db);
   registerMatchImpact(server, db);
+  registerInningsRecords(server, db);
+  registerTeamRecords(server, db);
+  registerClutchPerformance(server, db);
+  registerSuperOvers(server, db);
+  registerStreaks(server, db);
 }
