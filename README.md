@@ -21,8 +21,14 @@ Ask Claude things like:
 - *"Break down Rohit Sharma's record against each of England's bowlers"*
 - *"Who had the biggest impact in the T20 World Cup 2024 final?"*
 - *"Bumrah's last 10 T20 innings — is he in form?"*
+- *"Fastest hundred in IPL history?"*
+- *"Highest successful T20 chase ever?"*
+- *"Is Kohli actually a big-match player?"*
+- *"Has India ever lost a super over?"*
+- *"Longest streak of 50+ scores in ODIs?"*
+- *"How do Kohli and Rohit do batting together?"*
 
-## Tools (28 total)
+## Tools (33 total)
 
 ### Player Stats
 | Tool | What it does |
@@ -42,12 +48,21 @@ Ask Claude things like:
 |------|-------------|
 | `get_batting_records` | Rank players by runs, avg, SR, 100s, 50s, 6s, 4s, HS |
 | `get_bowling_records` | Rank players by wickets, avg, econ, SR, 5wi |
+| `get_innings_records` | Single-performance records — highest scores, fastest 50s/100s by balls, most 6s/4s in an innings, best bowling figures, most expensive over, most runs off one over |
+| `get_team_records` | Team extremes — highest/lowest totals, biggest & narrowest wins, highest successful chases, tied matches |
 
 ### Venue & Partnerships
 | Tool | What it does |
 |------|-------------|
 | `get_venue_stats` | Ground stats — avg scores, bat-first win %, highest/lowest totals |
-| `get_partnerships` | Highest batting partnerships |
+| `get_partnerships` | Highest batting partnerships, specific-pair stands, and career pair summaries (Kohli & Rohit together) |
+
+### Drama & Big Matches
+| Tool | What it does |
+|------|-------------|
+| `get_clutch_performance` | League vs knockout vs finals splits with a clutch delta — "is X a big-match player?" |
+| `get_super_overs` | Every super-over match with per-team scores and team super-over W/L records |
+| `get_streaks` | Longest runs of 50+ scores (threshold adjustable), consecutive ducks, team win/loss streaks |
 
 ### Batter vs Bowler Matchups
 | Tool | What it does |
@@ -214,7 +229,7 @@ The `-y` flag prevents npx from prompting for install confirmation, which would 
 
 ### OneLake backend (Microsoft Fabric)
 
-Instead of a local DuckDB file, cricket-mcp can read Delta tables directly from a Fabric lakehouse via OneLake. All 26 tools work unchanged — DuckDB's `delta` and `azure` extensions handle the reads.
+Instead of a local DuckDB file, cricket-mcp can read Delta tables directly from a Fabric lakehouse via OneLake. All 33 tools work unchanged — DuckDB's `delta` and `azure` extensions handle the reads.
 
 **Prerequisites:**
 - Azure CLI installed and logged in (`az login`)
@@ -339,11 +354,39 @@ Uses `get_emerging_players` with `perspective: "batting"`, `match_type: "T20"`.
 
 Uses `get_discipline_stats` with `perspective: "bowling"`, `phase: "death"`, `event_name: "Indian Premier League"`, `sort_by: "dot_ball_pct"`.
 
+### "Fastest hundred in IPL history?"
+
+Uses `get_innings_records` with `record_type: "fastest_hundred"`, `event_name: "Indian Premier League"`.
+
+Returns Chris Gayle's 30-ball hundred (175* off 66 vs Pune Warriors, 2013) at the top.
+
+### "Highest successful T20 chase?"
+
+Uses `get_team_records` with `record_type: "highest_successful_chase"`, `match_type: "T20"`.
+
+### "Is Kohli a big-match player?"
+
+Uses `get_clutch_performance` with `player_name: "Kohli"`, `event_name: "Indian Premier League"`.
+
+Returns league/knockout/finals splits plus a clutch delta — e.g. Kohli's IPL league average of ~41 drops to ~26 in knockouts (finals included).
+
+### "Has India ever lost a super over?"
+
+Uses `get_super_overs` with `team: "India"` — lists each super-over match with per-team scores and the aggregate record.
+
+### "Longest streak of 50+ scores in ODIs?"
+
+Uses `get_streaks` with `streak_type: "fifty_plus"`, `match_type: "ODI"`. Set `run_threshold: 100` for consecutive hundreds, or `streak_type: "team_wins"` for team streaks.
+
+### "How do Kohli and Rohit do batting together?"
+
+Uses `get_partnerships` with `player_name: "Kohli"`, `player2_name: "RG Sharma"`, `aggregate: true` — stands together, total runs, average stand, and 50+/100+ stand counts.
+
 ## How it works
 
 1. **Data**: [Cricsheet](https://cricsheet.org) provides free, open ball-by-ball data for every international and major domestic cricket match in JSON format.
 2. **Storage**: The `ingest` command downloads, parses, and loads this into a local [DuckDB](https://duckdb.org) database — a columnar analytics engine that eats aggregation queries for breakfast.
-3. **Server**: The MCP server exposes 28 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
+3. **Server**: The MCP server exposes 33 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
 
 ### Database schema
 
@@ -395,6 +438,17 @@ Within the coverage window, the data is ball-by-ball — every delivery, every r
 - **One-command setup**: `ingest` and `update` now run player-metadata enrichment automatically from the bundled CSV (`--no-enrich` to skip, `--enrich-csv` to override). The separate `enrich` step is no longer required; the command remains for manual/custom-CSV runs and now defaults to the bundled CSV.
 - **Freshness at serve time**: the server checks how far behind the data is at startup. By default it warns when stale (>10 days, accounting for Cricsheet's ~1-week processing lag); with `serve --auto-update` it pulls the smallest Cricsheet incremental feed that covers the gap, then serves. Gaps beyond 30 days are never auto-filled (a partial feed would leave a silent hole) — the warning points to a full re-ingest instead. Runs inside the background init, so the MCP handshake stays instant.
 - Dockerfile: index creation now actually runs in its own stage step (the previous file skipped it), and the redundant enrich step is gone.
+
+### v0.9.0
+- **Fan records & drama tools** (28 → 33): 5 new tools
+  - `get_innings_records` — single-performance leaderboards: highest scores, fastest 50s/100s by balls faced, most 6s/4s in an innings, best bowling figures, most expensive over, most runs off one over
+  - `get_team_records` — highest/lowest totals (lowest = all-out only), biggest & narrowest wins by runs or wickets, highest successful chases, tied matches
+  - `get_clutch_performance` — league vs knockout vs finals splits from `event_stage`, with a clutch delta
+  - `get_super_overs` — super-over match history with per-team scores and aggregate W/L
+  - `get_streaks` — gaps-and-islands streaks: consecutive 50+ scores (adjustable threshold), ducks, team wins/losses
+- `get_partnerships` pair mode: `player2_name` narrows to a specific pair, `aggregate: true` returns career pair summaries
+- Fixed `get_career_impact` (ambiguous column reference), `get_emerging_players` (invalid table alias in recent-season filter — the tool errored on every call), and `get_tournament_summary` (bind error on `aspect: "summary"`)
+- Fixed eval runner import crash; eval suite expanded to 75 checks covering all new tools
 
 ### v0.8.0
 - **Phase-relative impact scoring**: bowling economy is now scored per-phase against the match's average economy for that phase. Conceding 6 RPO in death overs (where 10+ is typical) earns far more credit than the same economy in middle overs. Batting gets a death-over SR bonus (1.3×) and powerplay aggression bonus (1.1×).

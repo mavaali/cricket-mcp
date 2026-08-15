@@ -14,13 +14,27 @@ export function registerPartnerships(
       title: "Partnership Records",
       description:
         "What are the biggest batting partnerships? Highest partnerships by total runs, showing both batters, runs, balls, venue, and match context. " +
-        "Use for 'Biggest opening stands in Tests', 'Kohli\\'s best partnerships in ODIs', or 'Highest stands in IPL 2024'. " +
+        "With both player_name and player2_name, focuses on that specific pair; with aggregate=true, returns career pair summaries " +
+        "(stands together, total runs, average stand, highest, 50+/100+ stand counts) instead of individual stands. " +
+        "Use for 'Biggest opening stands in Tests', 'Kohli and Rohit batting together in ODIs', or 'Most prolific partnership pairs in IPL history'. " +
         "Not for individual batting records (use get_batting_records) or batter-vs-bowler matchups (use get_matchup).",
       inputSchema: {
         player_name: z
           .string()
           .optional()
           .describe("Filter partnerships involving this player (partial match)."),
+        player2_name: z
+          .string()
+          .optional()
+          .describe(
+            "Second player — with player_name, restricts to stands between this specific pair (partial match)."
+          ),
+        aggregate: z
+          .boolean()
+          .default(false)
+          .describe(
+            "Return career pair summaries (stands, total runs, avg stand, highest, 50+/100+ counts) instead of individual stands."
+          ),
         ...MatchFilterSchema.shape,
         min_runs: z
           .number()
@@ -37,9 +51,14 @@ export function registerPartnerships(
       },
     },
     async (args) => {
-      const { player_name, min_runs, limit, ...filters } = args;
+      const { player_name, player2_name, aggregate, min_runs, limit, ...filters } =
+        args;
       const { whereClauses, params } = buildMatchFilter(filters);
-      params.min_runs = min_runs;
+      // Aggregate mode summarizes every stand a pair had, so the per-stand
+      // run floor only applies when listing individual stands.
+      if (!aggregate) {
+        params.min_runs = min_runs;
+      }
       params.limit = limit;
 
       if (player_name) {
@@ -48,8 +67,46 @@ export function registerPartnerships(
         );
         params.player_name = player_name;
       }
+      if (player2_name) {
+        whereClauses.push(
+          "(d.batter ILIKE '%' || $player2_name || '%' OR d.non_striker ILIKE '%' || $player2_name || '%')"
+        );
+        params.player2_name = player2_name;
+      }
 
       const filterStr = buildWhereClause(whereClauses);
+
+      const finalSelect = aggregate
+        ? `
+        SELECT
+          pair_a,
+          pair_b,
+          COUNT(*) AS stands,
+          SUM(partnership_runs) AS total_runs,
+          ROUND(AVG(partnership_runs), 2) AS avg_stand,
+          MAX(partnership_runs) AS highest,
+          COUNT(*) FILTER (WHERE partnership_runs >= 50) AS fifty_plus_stands,
+          COUNT(*) FILTER (WHERE partnership_runs >= 100) AS hundred_plus_stands
+        FROM partnerships
+        GROUP BY pair_a, pair_b
+        ORDER BY total_runs DESC
+        LIMIT $limit`
+        : `
+        SELECT
+          pair_a,
+          pair_b,
+          partnership_runs,
+          partnership_balls,
+          match_id,
+          innings_number,
+          venue,
+          date,
+          match_type,
+          event_name
+        FROM partnerships
+        WHERE partnership_runs >= $min_runs
+        ORDER BY partnership_runs DESC
+        LIMIT $limit`;
 
       const sql = `
         WITH batting_pairs AS (
@@ -83,21 +140,7 @@ export function registerPartnerships(
           FROM batting_pairs
           GROUP BY match_id, innings_number, pair_a, pair_b
         )
-        SELECT
-          pair_a,
-          pair_b,
-          partnership_runs,
-          partnership_balls,
-          match_id,
-          innings_number,
-          venue,
-          date,
-          match_type,
-          event_name
-        FROM partnerships
-        WHERE partnership_runs >= $min_runs
-        ORDER BY partnership_runs DESC
-        LIMIT $limit
+        ${finalSelect}
       `;
 
       const rows = await runQuery(db, sql, params);

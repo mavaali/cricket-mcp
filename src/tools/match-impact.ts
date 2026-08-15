@@ -866,7 +866,7 @@ export function registerMatchImpact(
         // Team totals
         const ttRows = await runQuery(
           db,
-          `SELECT innings_number, i.batting_team, i.target_runs,
+          `SELECT d.innings_number, i.batting_team, i.target_runs,
                   SUM(d.runs_total) AS team_total,
                   ${BOWL.legalBalls} AS team_balls
            FROM deliveries d

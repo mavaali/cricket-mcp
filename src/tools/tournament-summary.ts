@@ -185,7 +185,9 @@ export function registerTournamentSummary(
           FROM matches m
           WHERE ${commonFilter}
         `;
-        const meta = await runQuery(db, metaSql, params);
+        // metaSql has no $limit placeholder; binding an unused param errors.
+        const { limit: _unused, ...metaParams } = params;
+        const meta = await runQuery(db, metaSql, metaParams);
         result.meta = meta[0] || {};
       }
 
