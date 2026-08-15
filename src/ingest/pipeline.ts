@@ -4,7 +4,36 @@ import { createSchema, createIndexes, migrateSchema } from "../db/schema.js";
 import { downloadAndExtract, downloadRecentZip } from "./downloader.js";
 import { parseMatchFile } from "./parser.js";
 import { loadBatch, seedInsertedPlayers } from "./loader.js";
+import { enrichPlayers } from "./enrichment.js";
 import fs from "node:fs";
+import type { DuckDBConnection } from "@duckdb/node-api";
+
+/**
+ * Run enrichment as a best-effort step at the end of ingest/update. A missing
+ * CSV or a malformed row should never fail the ingest that just succeeded —
+ * enrichment only adds player metadata (batting/bowling styles).
+ */
+async function enrichBestEffort(
+  conn: DuckDBConnection,
+  enrichCsv: string | undefined
+): Promise<void> {
+  if (!enrichCsv) return;
+  if (!fs.existsSync(enrichCsv)) {
+    console.error(
+      `\nSkipping enrichment: metadata CSV not found at ${enrichCsv}`
+    );
+    return;
+  }
+  try {
+    console.error("");
+    await enrichPlayers(conn, enrichCsv);
+  } catch (err) {
+    console.error(
+      `Warning: enrichment failed (${err instanceof Error ? err.message : err}). ` +
+        `Style-based tools will have incomplete data; run 'npm run enrich' to retry.`
+    );
+  }
+}
 
 export async function runIngest(options: {
   url?: string;
@@ -12,6 +41,8 @@ export async function runIngest(options: {
   dbPath?: string;
   force?: boolean;
   skipIndexes?: boolean;
+  /** Player metadata CSV to auto-enrich with after loading; undefined = skip. */
+  enrichCsv?: string;
 }): Promise<void> {
   const dataDir = options.dataDir ?? "./data";
   const dbPath = options.dbPath ?? path.join(dataDir, "cricket.duckdb");
@@ -71,7 +102,10 @@ export async function runIngest(options: {
     await createIndexes(conn);
   }
 
-  // Step 5: Print summary
+  // Step 5: Enrich player metadata (batting/bowling styles) from bundled CSV
+  await enrichBestEffort(conn, options.enrichCsv);
+
+  // Step 6: Print summary
   const matchCount = await conn.runAndReadAll(
     "SELECT COUNT(*) as cnt FROM matches"
   );
@@ -91,7 +125,7 @@ export async function runIngest(options: {
   }
   console.error(`  Database:   ${dbPath}`);
 
-  // Step 6: Clean up extracted JSON files
+  // Step 7: Clean up extracted JSON files
   const jsonDir = path.join(dataDir, "json");
   if (fs.existsSync(jsonDir)) {
     console.error("\nCleaning up extracted files...");
@@ -116,6 +150,8 @@ export async function runUpdate(options: {
   days?: 2 | 7 | 30;
   dbPath?: string;
   dataDir?: string;
+  /** Player metadata CSV to auto-enrich with after loading; undefined = skip. */
+  enrichCsv?: string;
 }): Promise<void> {
   const days = options.days ?? 7;
   const dataDir = options.dataDir ?? "./data";
@@ -195,7 +231,10 @@ export async function runUpdate(options: {
   // Step 6: Ensure indexes exist (IF NOT EXISTS — fast no-op if already there)
   await createIndexes(conn);
 
-  // Step 7: Summary
+  // Step 7: Enrich — new matches can introduce new players without styles
+  await enrichBestEffort(conn, options.enrichCsv);
+
+  // Step 8: Summary
   console.error(`\n=== Update Complete ===`);
   console.error(`  Added:    ${newFiles.length - failed} matches (${totalDeliveries.toLocaleString()} deliveries)`);
   console.error(`  Skipped:  ${skipped} existing`);

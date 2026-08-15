@@ -129,7 +129,7 @@ npm install
 
 ### Ingest the data
 
-This downloads all Cricsheet data (~94 MB ZIP, 21,000+ matches) and loads it into a local DuckDB database:
+This downloads all Cricsheet data (~94 MB ZIP, 21,000+ matches), loads it into a local DuckDB database, and enriches player metadata (batting/bowling styles) from the bundled CSV — one command, nothing else to run:
 
 ```bash
 npm run ingest
@@ -159,7 +159,15 @@ npm run update -- --days 2   # last 2 days
 npm run update -- --days 30  # last 30 days
 ```
 
-Downloads `recently_played_N_json.zip` from Cricsheet, skips matches already in the DB, inserts only new ones. Takes seconds.
+Downloads `recently_played_N_json.zip` from Cricsheet, skips matches already in the DB, inserts only new ones, and re-runs enrichment for any new players. Takes seconds.
+
+Prefer it fully hands-off? Add `--auto-update` to the serve command and the server checks freshness at startup and pulls the right incremental feed itself (gaps larger than 30 days get a warning to re-ingest instead, since incremental feeds can't fill them without holes):
+
+```bash
+npx tsx src/index.ts serve --auto-update
+```
+
+Without the flag, the server logs a warning at startup when the data is noticeably stale (more than ~10 days behind — Cricsheet itself processes matches with roughly a week of lag).
 
 For a full rebuild (e.g., to pick up Cricsheet corrections to historical data):
 
@@ -167,17 +175,20 @@ For a full rebuild (e.g., to pick up Cricsheet corrections to historical data):
 npm run ingest -- --force
 ```
 
-### Enrich player metadata
+### Player metadata enrichment
 
-Cricsheet data doesn't include player attributes like batting hand or bowling style. The repo includes `data/player_meta.csv` (from the [cricketdata](https://github.com/ropenscilabs/cricketdata) R package, 16K players) which adds these attributes. Run this after your first ingest:
+Cricsheet data doesn't include player attributes like batting hand or bowling style. The repo bundles `data/player_meta.csv` (from the [cricketdata](https://github.com/ropenscilabs/cricketdata) R package, 16K players), and `ingest`/`update` apply it automatically — this is what powers `get_style_matchup` (*"How does Kohli bat against left-arm pace?"*).
+
+To re-run manually or use your own CSV:
 
 ```bash
-npm run enrich -- --csv data/player_meta.csv
+npm run enrich                      # bundled CSV
+npm run enrich -- --csv my.csv     # custom CSV
 ```
 
-This enables the `get_style_matchup` tool — e.g., *"How does Kohli bat against left-arm pace?"* or *"Bumrah's record against left-handers"*.
+Pass `--no-enrich` to `ingest`/`update` to skip it.
 
-> **Note:** The MCP server must not be running when you enrich (DuckDB allows only one write connection). Quit Claude Desktop first, run the command, then reopen.
+> **Note:** The MCP server must not be running during enrichment or updates (DuckDB allows only one write connection). Quit Claude Desktop first, run the command, then reopen.
 
 ### Connect to Claude Desktop
 
@@ -422,6 +433,11 @@ Data is updated regularly and includes matches through early 2026 at time of wri
 Within the coverage window, the data is ball-by-ball — every delivery, every run, every dismissal, every extra. Phase analysis, matchup breakdowns, strike rates, dot ball percentages, and other granular metrics are all derived from actual delivery data, not aggregated scorecards.
 
 ## Changelog
+
+### v0.10.0
+- **One-command setup**: `ingest` and `update` now run player-metadata enrichment automatically from the bundled CSV (`--no-enrich` to skip, `--enrich-csv` to override). The separate `enrich` step is no longer required; the command remains for manual/custom-CSV runs and now defaults to the bundled CSV.
+- **Freshness at serve time**: the server checks how far behind the data is at startup. By default it warns when stale (>10 days, accounting for Cricsheet's ~1-week processing lag); with `serve --auto-update` it pulls the smallest Cricsheet incremental feed that covers the gap, then serves. Gaps beyond 30 days are never auto-filled (a partial feed would leave a silent hole) — the warning points to a full re-ingest instead. Runs inside the background init, so the MCP handshake stays instant.
+- Dockerfile: index creation now actually runs in its own stage step (the previous file skipped it), and the redundant enrich step is gone.
 
 ### v0.9.0
 - **Fan records & drama tools** (28 → 33): 5 new tools
