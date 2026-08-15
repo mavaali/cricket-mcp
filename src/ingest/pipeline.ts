@@ -56,12 +56,25 @@ export async function runIngest(options: {
 
   console.error(`\nTotal JSON files to ingest: ${jsonFiles.length}`);
 
-  // Step 2: Open DB and create schema
+  // Step 2: Start from a clean database. Ingest loads the full Cricsheet dump
+  // with raw appenders (no upsert), so rows already present would violate
+  // primary keys partway through. The DB is entirely reproducible from the
+  // dump, and this runs only after the download succeeded — a failed download
+  // leaves the existing DB untouched.
+  if (fs.existsSync(dbPath)) {
+    console.error(`Removing existing database at ${dbPath} for a clean rebuild...`);
+    fs.rmSync(dbPath);
+    if (fs.existsSync(`${dbPath}.wal`)) {
+      fs.rmSync(`${dbPath}.wal`);
+    }
+  }
+
+  // Step 3: Open DB and create schema
   const conn = await getConnection(dbPath, false);
   await createSchema(conn);
   await migrateSchema(conn);
 
-  // Step 3: Parse and load in batches
+  // Step 4: Parse and load in batches
   const BATCH_SIZE = 500;
   let totalDeliveries = 0;
   let failed = 0;
@@ -94,7 +107,7 @@ export async function runIngest(options: {
     );
   }
 
-  // Step 4: Create indexes
+  // Step 5: Create indexes
   if (options.skipIndexes) {
     console.error("\nSkipping index creation (--no-index)");
   } else {
@@ -102,10 +115,10 @@ export async function runIngest(options: {
     await createIndexes(conn);
   }
 
-  // Step 5: Enrich player metadata (batting/bowling styles) from bundled CSV
+  // Step 6: Enrich player metadata (batting/bowling styles) from bundled CSV
   await enrichBestEffort(conn, options.enrichCsv);
 
-  // Step 6: Print summary
+  // Step 7: Print summary
   const matchCount = await conn.runAndReadAll(
     "SELECT COUNT(*) as cnt FROM matches"
   );
@@ -125,7 +138,7 @@ export async function runIngest(options: {
   }
   console.error(`  Database:   ${dbPath}`);
 
-  // Step 7: Clean up extracted JSON files
+  // Step 8: Clean up extracted JSON files
   const jsonDir = path.join(dataDir, "json");
   if (fs.existsSync(jsonDir)) {
     console.error("\nCleaning up extracted files...");
