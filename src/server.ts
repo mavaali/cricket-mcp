@@ -8,6 +8,7 @@ import type { DuckDBConnection } from "@duckdb/node-api";
 import { getConnection } from "./db/connection.js";
 import { getOneLakeConnection, type OneLakeConfig } from "./backends/onelake.js";
 import { migrateSchema } from "./db/schema.js";
+import { ensureFresh } from "./ingest/freshness.js";
 import { registerAllTools } from "./tools/register.js";
 import { registerAllPrompts } from "./prompts/register.js";
 
@@ -15,6 +16,8 @@ export interface ServerOptions {
   dbPath?: string;
   backend?: "local" | "onelake";
   onelake?: OneLakeConfig;
+  /** Local backend only: incrementally update stale data at startup. */
+  autoUpdate?: boolean;
 }
 
 /**
@@ -25,26 +28,27 @@ export interface ServerOptions {
 function initConnection(
   options: string | ServerOptions
 ): Promise<DuckDBConnection> {
-  if (typeof options === "string") {
-    // Legacy: string path = local DuckDB file
-    return getConnection(options).then(async (conn) => {
-      try { await migrateSchema(conn); } catch { /* read-only mode — tables already exist */ }
-      return conn;
-    });
-  }
-
-  if (options.backend === "onelake" && options.onelake) {
-    // OneLake backend: read Delta tables from Fabric
+  if (options !== null && typeof options === "object" && options.backend === "onelake" && options.onelake) {
+    // OneLake backend: read Delta tables from Fabric. Freshness is owned by
+    // the Fabric pipeline, not this server.
     console.error("Starting in OneLake mode...");
     return getOneLakeConnection(options.onelake);
   }
 
-  // Default: local DuckDB
-  const dbPath = options.dbPath!;
-  return getConnection(dbPath).then(async (conn) => {
-    try { await migrateSchema(conn); } catch { /* read-only mode — tables already exist */ }
-    return conn;
-  });
+  // Local DuckDB (string form is the legacy call signature)
+  const dbPath = typeof options === "string" ? options : options.dbPath!;
+  const autoUpdate = typeof options === "string" ? false : !!options.autoUpdate;
+
+  // ensureFresh runs before the read-only serving connection opens: an
+  // auto-update needs the write lock, and DuckDB allows only one writer.
+  // This happens inside the background init promise, so the MCP handshake
+  // still completes instantly; the first tool call waits for it.
+  return ensureFresh(dbPath, { autoUpdate })
+    .then(() => getConnection(dbPath))
+    .then(async (conn) => {
+      try { await migrateSchema(conn); } catch { /* read-only mode — tables already exist */ }
+      return conn;
+    });
 }
 
 export async function startServer(

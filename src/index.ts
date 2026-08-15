@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_DATA_DIR = path.join(PROJECT_ROOT, "data");
 const DEFAULT_DB_PATH = path.join(DEFAULT_DATA_DIR, "cricket.duckdb");
+const DEFAULT_META_CSV = path.join(DEFAULT_DATA_DIR, "player_meta.csv");
 
 const program = new Command();
 
@@ -30,6 +31,12 @@ program
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
   .option("--force", "Re-download even if data exists", false)
   .option("--no-index", "Skip index creation (useful in Docker builds)")
+  .option(
+    "--enrich-csv <path>",
+    "Player metadata CSV for automatic enrichment",
+    DEFAULT_META_CSV
+  )
+  .option("--no-enrich", "Skip automatic player metadata enrichment")
   .action(async (options) => {
     await runIngest({
       url: options.url,
@@ -37,6 +44,7 @@ program
       dbPath: options.db,
       force: options.force,
       skipIndexes: !options.index,
+      enrichCsv: options.enrich ? options.enrichCsv : undefined,
     });
   });
 
@@ -46,6 +54,12 @@ program
   .option("--days <days>", "Recent period: 2, 7, or 30 days", "7")
   .option("--data-dir <dir>", "Data directory", DEFAULT_DATA_DIR)
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
+  .option(
+    "--enrich-csv <path>",
+    "Player metadata CSV for automatic enrichment",
+    DEFAULT_META_CSV
+  )
+  .option("--no-enrich", "Skip automatic player metadata enrichment")
   .action(async (options) => {
     const days = parseInt(options.days, 10);
     if (![2, 7, 30].includes(days)) {
@@ -56,6 +70,7 @@ program
       days: days as 2 | 7 | 30,
       dataDir: options.dataDir,
       dbPath: options.db,
+      enrichCsv: options.enrich ? options.enrichCsv : undefined,
     });
   });
 
@@ -64,7 +79,7 @@ program
   .description(
     "Enrich player table with metadata (batting style, bowling style, playing role, country) from a CSV"
   )
-  .requiredOption("--csv <path>", "Path to CSV with player metadata")
+  .option("--csv <path>", "Path to CSV with player metadata", DEFAULT_META_CSV)
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
   .action(async (options) => {
     await runEnrichment({
@@ -98,6 +113,11 @@ program
     "stdio"
   )
   .option("--port <port>", "HTTP port (only used with --transport http)", "3000")
+  .option(
+    "--auto-update",
+    "Incrementally pull recent Cricsheet matches at startup when the data is stale (local backend only)",
+    false
+  )
   .action(async (options) => {
     const serverOptions =
       options.backend === "onelake"
@@ -108,6 +128,11 @@ program
               );
               process.exit(1);
             }
+            if (options.autoUpdate) {
+              console.error(
+                "Note: --auto-update is ignored with the onelake backend (data freshness is owned by the Fabric pipeline)"
+              );
+            }
             return {
               backend: "onelake" as const,
               onelake: {
@@ -116,7 +141,7 @@ program
               },
             };
           })()
-        : options.db;
+        : { dbPath: options.db, autoUpdate: options.autoUpdate };
 
     if (options.transport === "http") {
       const port = parseInt(options.port, 10);

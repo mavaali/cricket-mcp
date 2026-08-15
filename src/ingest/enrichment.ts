@@ -21,20 +21,32 @@ export async function runEnrichment(options: {
   csvPath: string;
   dbPath: string;
 }): Promise<void> {
-  const csvAbsPath = path.resolve(options.csvPath);
-  if (!fs.existsSync(csvAbsPath)) {
-    throw new Error(`CSV file not found: ${csvAbsPath}`);
-  }
-
   if (!fs.existsSync(options.dbPath)) {
     throw new Error(
       `Database not found at ${options.dbPath}. Run 'npm run ingest' first.`
     );
   }
 
-  console.error(`Enriching players from ${csvAbsPath}...`);
-
   const conn = await getConnection(options.dbPath, false);
+  await enrichPlayers(conn, options.csvPath);
+  await closeConnection();
+}
+
+/**
+ * Core enrichment: load player metadata from a CSV into the players table of
+ * an already-open (writable) connection. Called both by the standalone
+ * `enrich` command and automatically at the end of `ingest`/`update`.
+ */
+export async function enrichPlayers(
+  conn: Awaited<ReturnType<typeof getConnection>>,
+  csvPath: string
+): Promise<void> {
+  const csvAbsPath = path.resolve(csvPath);
+  if (!fs.existsSync(csvAbsPath)) {
+    throw new Error(`CSV file not found: ${csvAbsPath}`);
+  }
+
+  console.error(`Enriching players from ${csvAbsPath}...`);
 
   // Ensure new columns exist
   await migrateSchema(conn);
@@ -179,6 +191,4 @@ export async function runEnrichment(options: {
   console.error(`  Total players:  ${totalPlayers}`);
   console.error(`  Enriched:       ${enrichedPlayers}`);
   console.error(`  Columns:        ${updateParts.map((p) => p.split(" = ")[0]).join(", ")}`);
-
-  await closeConnection();
 }
