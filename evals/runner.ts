@@ -254,7 +254,7 @@ eval_("Bowling economy = runs / overs", "bowling-stats", async (conn) => {
 // Category 4: Head to Head
 // ──────────────────────────────────────────────
 
-eval_("India vs Australia Tests - 50 matches", "head-to-head", async (conn) => {
+eval_("India vs Australia Tests - 50+ matches", "head-to-head", async (conn) => {
   const { whereClauses, params } = buildMatchFilter({ match_type: "Test" });
   params.team1 = "India";
   params.team2 = "Australia";
@@ -275,8 +275,15 @@ eval_("India vs Australia Tests - 50 matches", "head-to-head", async (conn) => {
   const indWins = Number(rows[0].team1_wins);
   const ausWins = Number(rows[0].team2_wins);
   const draws = Number(rows[0].draws);
+  // Floors, not exact counts — the dataset grows with every update, so exact
+  // pins break on refresh. Wins/draws can only accumulate, never shrink.
   return {
-    pass: total === 50 && indWins === 20 && ausWins === 16 && draws === 14,
+    pass:
+      total >= 50 &&
+      indWins >= 20 &&
+      ausWins >= 16 &&
+      draws >= 14 &&
+      indWins + ausWins + draws <= total,
     details: `Total: ${total}, Ind: ${indWins}, Aus: ${ausWins}, Draws: ${draws}`,
   };
 });
