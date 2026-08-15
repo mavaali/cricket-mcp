@@ -16,7 +16,11 @@ import { buildBowlingStatsQuery } from "../src/queries/bowling.js";
 import { buildBattingRecordsQuery } from "../src/queries/batting.js";
 import { buildBowlingRecordsQuery } from "../src/queries/bowling.js";
 import { buildMatchupQuery } from "../src/queries/matchup.js";
-import { buildMatchFilter, buildWhereString } from "../src/queries/common.js";
+import { buildMatchFilter, buildAndClause } from "../src/queries/common.js";
+import { buildInningsRecordsQuery } from "../src/queries/innings-records.js";
+import { buildTeamRecordsQuery } from "../src/queries/team-records.js";
+import { buildClutchQuery } from "../src/queries/clutch.js";
+import { buildStreaksQuery } from "../src/queries/streaks.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.resolve(__dirname, "../data/cricket.duckdb");
@@ -254,7 +258,7 @@ eval_("India vs Australia Tests - 50 matches", "head-to-head", async (conn) => {
   const { whereClauses, params } = buildMatchFilter({ match_type: "Test" });
   params.team1 = "India";
   params.team2 = "Australia";
-  const filterStr = buildWhereString(whereClauses);
+  const filterStr = buildAndClause(whereClauses);
 
   const rows = await runQuery(
     conn,
@@ -1035,6 +1039,291 @@ eval_("What-if: excluding venue reduces match count", "what-if", async (conn) =>
   return {
     pass: modMatches > 0 && modMatches < origMatches,
     details: `Original: ${origMatches} matches, Excl Melbourne: ${modMatches}`,
+  };
+});
+
+// ──────────────────────────────────────────────
+// Category 19: Innings Records
+// ──────────────────────────────────────────────
+
+eval_("Highest T20 score is 175+ (Gayle 175* era)", "innings-records", async (conn) => {
+  const { sql, params } = buildInningsRecordsQuery("highest_score", undefined, { match_type: "T20", gender: "male" }, 3);
+  const rows = await runQuery(conn, sql, params);
+  const top = Number(rows[0]?.runs ?? 0);
+  return {
+    pass: rows.length === 3 && top >= 175,
+    details: `Top T20 innings: ${rows[0]?.player_name} ${top} (${rows[0]?.balls} balls)`,
+  };
+});
+
+eval_("Fastest T20 fifty is 20 balls or fewer", "innings-records", async (conn) => {
+  const { sql, params } = buildInningsRecordsQuery("fastest_fifty", undefined, { match_type: "T20", gender: "male" }, 3);
+  const rows = await runQuery(conn, sql, params);
+  const balls = Number(rows[0]?.balls_to_milestone ?? 999);
+  const finalRuns = Number(rows[0]?.final_runs ?? 0);
+  return {
+    pass: balls > 0 && balls <= 20 && finalRuns >= 50,
+    details: `Fastest T20 fifty: ${rows[0]?.player_name} in ${balls} balls (finished ${finalRuns})`,
+  };
+});
+
+eval_("Fastest hundred takes more balls than fastest fifty", "innings-records", async (conn) => {
+  const fifty = buildInningsRecordsQuery("fastest_fifty", undefined, { match_type: "ODI" }, 1);
+  const hundred = buildInningsRecordsQuery("fastest_hundred", undefined, { match_type: "ODI" }, 1);
+  const fiftyRows = await runQuery(conn, fifty.sql, fifty.params);
+  const hundredRows = await runQuery(conn, hundred.sql, hundred.params);
+  const f = Number(fiftyRows[0]?.balls_to_milestone ?? 0);
+  const h = Number(hundredRows[0]?.balls_to_milestone ?? 0);
+  return {
+    pass: f > 0 && h > f && h <= 50,
+    details: `Fastest ODI fifty: ${f} balls, fastest hundred: ${h} balls (${hundredRows[0]?.player_name})`,
+  };
+});
+
+eval_("Best bowling figures in an innings sorts by wickets then runs", "innings-records", async (conn) => {
+  const { sql, params } = buildInningsRecordsQuery("best_bowling_figures", undefined, { match_type: "Test" }, 5);
+  const rows = await runQuery(conn, sql, params);
+  const topWkts = Number(rows[0]?.wickets ?? 0);
+  const ordered = rows.every((r, i) =>
+    i === 0 ||
+    Number(r.wickets) < Number(rows[i - 1].wickets) ||
+    (Number(r.wickets) === Number(rows[i - 1].wickets) &&
+      Number(r.runs_conceded) >= Number(rows[i - 1].runs_conceded))
+  );
+  return {
+    pass: rows.length === 5 && topWkts >= 8 && ordered,
+    details: `Best Test figures: ${rows[0]?.player_name} ${rows[0]?.figures}`,
+  };
+});
+
+eval_("Most runs in an over caps at 36 off the bat (plus rare extras)", "innings-records", async (conn) => {
+  const { sql, params } = buildInningsRecordsQuery("most_runs_in_over", undefined, {}, 3);
+  const rows = await runQuery(conn, sql, params);
+  const top = Number(rows[0]?.runs ?? 0);
+  return {
+    pass: top >= 30 && top <= 42,
+    details: `Most runs in an over: ${rows[0]?.player_name} ${top} off ${rows[0]?.bowler}`,
+  };
+});
+
+eval_("Player filter works for innings records - Kohli highest scores", "innings-records", async (conn) => {
+  const { sql, params } = buildInningsRecordsQuery("highest_score", "Kohli", { match_type: "ODI" }, 3);
+  const rows = await runQuery(conn, sql, params);
+  const allKohli = rows.every((r) => String(r.player_name).includes("Kohli"));
+  const top = Number(rows[0]?.runs ?? 0);
+  return {
+    pass: rows.length === 3 && allKohli && top === 183,
+    details: `Kohli's top ODI score: ${top}`,
+  };
+});
+
+// ──────────────────────────────────────────────
+// Category 20: Team Records
+// ──────────────────────────────────────────────
+
+eval_("Highest ODI total is 400+", "team-records", async (conn) => {
+  const { sql, params } = buildTeamRecordsQuery("highest_total", { match_type: "ODI", gender: "male" }, 3);
+  const rows = await runQuery(conn, sql, params);
+  const top = Number(rows[0]?.total_runs ?? 0);
+  return {
+    pass: rows.length === 3 && top >= 400,
+    details: `Highest ODI total: ${rows[0]?.team} ${rows[0]?.total}`,
+  };
+});
+
+eval_("Lowest totals are all-out innings only", "team-records", async (conn) => {
+  const { sql, params } = buildTeamRecordsQuery("lowest_total", { match_type: "ODI", gender: "male" }, 5);
+  const rows = await runQuery(conn, sql, params);
+  const allOut = rows.every((r) => Number(r.wickets_lost) >= 10);
+  const top = Number(rows[0]?.total_runs ?? 999);
+  return {
+    pass: rows.length === 5 && allOut && top < 60,
+    details: `Lowest ODI total: ${rows[0]?.team} ${rows[0]?.total_runs} all out`,
+  };
+});
+
+eval_("A 1-wicket win exists", "team-records", async (conn) => {
+  const { sql, params } = buildTeamRecordsQuery("narrowest_win_wickets", {}, 3);
+  const rows = await runQuery(conn, sql, params);
+  const margin = Number(rows[0]?.margin ?? 0);
+  return {
+    pass: rows.length === 3 && margin === 1,
+    details: `Narrowest win by wickets: ${rows[0]?.winner} by ${margin} wicket(s)`,
+  };
+});
+
+eval_("Highest successful T20 chase is a real chase (200-280, target met)", "team-records", async (conn) => {
+  const { sql, params } = buildTeamRecordsQuery("highest_successful_chase", { match_type: "T20", gender: "male" }, 3);
+  const rows = await runQuery(conn, sql, params);
+  const top = Number(rows[0]?.total_runs ?? 0);
+  // Every row must be a genuine chase: a target exists and was reached.
+  // Guards against teams batting first leaking in (the winner's own innings
+  // being miscounted as the match's last innings).
+  const allChases = rows.every(
+    (r) => r.target_runs !== null && Number(r.total_runs) >= Number(r.target_runs)
+  );
+  return {
+    pass: rows.length === 3 && top >= 200 && top <= 280 && allChases,
+    details: `Highest successful T20 chase: ${rows[0]?.team} ${rows[0]?.chase} (target ${rows[0]?.target_runs})`,
+  };
+});
+
+eval_("Tied matches exist and are ties", "team-records", async (conn) => {
+  const { sql, params } = buildTeamRecordsQuery("tied_matches", { match_type: "ODI" }, 10);
+  const rows = await runQuery(conn, sql, params);
+  const allTies = rows.every((r) => r.outcome_result === "tie");
+  return {
+    pass: rows.length >= 5 && allTies,
+    details: `ODI ties found: ${rows.length}`,
+  };
+});
+
+// ──────────────────────────────────────────────
+// Category 21: Clutch Performance
+// ──────────────────────────────────────────────
+
+eval_("Clutch buckets partition Kohli's IPL innings", "clutch", async (conn) => {
+  const bucket = buildClutchQuery("V Kohli", "batting", { event_name: "Indian Premier League" }, "bucket");
+  const rows = await runQuery(conn, bucket.sql, bucket.params);
+  const buckets = rows.map((r) => r.stage as string);
+  const totalInnings = rows.reduce((a, r) => a + Number(r.innings), 0);
+  const valid = buckets.every((b) => ["league", "knockout", "final", "placement"].includes(b));
+  return {
+    pass: rows.length >= 2 && valid && totalInnings > 200,
+    details: `Buckets: ${buckets.join(",")}; innings total: ${totalInnings}`,
+  };
+});
+
+eval_("Kohli has final-stage IPL innings", "clutch", async (conn) => {
+  const bucket = buildClutchQuery("V Kohli", "batting", { event_name: "Indian Premier League" }, "bucket");
+  const rows = await runQuery(conn, bucket.sql, bucket.params);
+  const final = rows.find((r) => r.stage === "final");
+  return {
+    pass: final !== undefined && Number(final.innings) >= 1,
+    details: `Kohli IPL finals innings: ${final?.innings ?? 0}, runs: ${final?.runs ?? 0}`,
+  };
+});
+
+eval_("Bowling clutch returns best figures per stage", "clutch", async (conn) => {
+  const bucket = buildClutchQuery("JJ Bumrah", "bowling", { match_type: "T20" }, "bucket");
+  const rows = await runQuery(conn, bucket.sql, bucket.params);
+  const league = rows.find((r) => r.stage === "league");
+  const figures = String(league?.best_figures ?? "");
+  return {
+    pass: rows.length >= 1 && /^\d+\/\d+$/.test(figures),
+    details: `Bumrah league best: ${figures}, wickets: ${league?.wickets}`,
+  };
+});
+
+// ──────────────────────────────────────────────
+// Category 22: Super Overs
+// ──────────────────────────────────────────────
+
+eval_("Super over innings exist (200+)", "super-overs", async (conn) => {
+  const rows = await runQuery(conn, "SELECT COUNT(*) AS cnt FROM innings WHERE is_super_over");
+  const cnt = Number(rows[0].cnt);
+  return {
+    pass: cnt >= 200,
+    details: `Super over innings: ${cnt}`,
+  };
+});
+
+eval_("Super over matches have per-team scores", "super-overs", async (conn) => {
+  const sql = `
+    WITH so_scores AS (
+      SELECT i.match_id, i.innings_number, i.batting_team,
+        SUM(d.runs_total) AS runs
+      FROM innings i
+      JOIN deliveries d ON d.match_id = i.match_id AND d.innings_number = i.innings_number
+      WHERE i.is_super_over
+      GROUP BY i.match_id, i.innings_number, i.batting_team
+    )
+    SELECT match_id, COUNT(*) AS so_innings FROM so_scores GROUP BY match_id
+  `;
+  const rows = await runQuery(conn, sql);
+  const allHaveTwo = rows.every((r) => Number(r.so_innings) >= 2);
+  return {
+    pass: rows.length >= 90 && allHaveTwo,
+    details: `Super over matches: ${rows.length}; all have 2+ SO innings: ${allHaveTwo}`,
+  };
+});
+
+// ──────────────────────────────────────────────
+// Category 23: Streaks
+// ──────────────────────────────────────────────
+
+eval_("Longest ODI 50+ streak is 4+ innings", "streaks", async (conn) => {
+  const { sql, params } = buildStreaksQuery("fifty_plus", undefined, { match_type: "ODI", gender: "male" }, 50, 5);
+  const rows = await runQuery(conn, sql, params);
+  const top = Number(rows[0]?.streak_length ?? 0);
+  return {
+    pass: rows.length === 5 && top >= 4,
+    details: `Longest ODI 50+ streak: ${rows[0]?.player_name} (${top} innings)`,
+  };
+});
+
+eval_("Duck streaks exist (2+ consecutive ducks)", "streaks", async (conn) => {
+  const { sql, params } = buildStreaksQuery("duck_streak", undefined, { match_type: "Test" }, 50, 5);
+  const rows = await runQuery(conn, sql, params);
+  const top = Number(rows[0]?.streak_length ?? 0);
+  const allZeroRuns = rows.every((r) => Number(r.runs_in_streak) === 0);
+  return {
+    pass: rows.length === 5 && top >= 3 && allZeroRuns,
+    details: `Longest Test duck streak: ${rows[0]?.player_name} (${top} ducks)`,
+  };
+});
+
+eval_("Team win streaks are 5+ in T20", "streaks", async (conn) => {
+  const { sql, params } = buildStreaksQuery("team_wins", undefined, { match_type: "T20", gender: "male" }, 50, 5);
+  const rows = await runQuery(conn, sql, params);
+  const top = Number(rows[0]?.streak_length ?? 0);
+  return {
+    pass: rows.length === 5 && top >= 5,
+    details: `Longest T20 win streak: ${rows[0]?.team} (${top} wins)`,
+  };
+});
+
+eval_("Focused team streak works - India win streaks only", "streaks", async (conn) => {
+  const { sql, params } = buildStreaksQuery("team_wins", "India", { match_type: "ODI" }, 50, 5);
+  const rows = await runQuery(conn, sql, params);
+  const allIndia = rows.every((r) => String(r.team).includes("India"));
+  return {
+    pass: rows.length >= 1 && allIndia,
+    details: `India ODI win streaks: top ${rows[0]?.streak_length} (${rows[0]?.start_date} to ${rows[0]?.end_date})`,
+  };
+});
+
+// ──────────────────────────────────────────────
+// Category 24: Partnership pairs
+// ──────────────────────────────────────────────
+
+eval_("Kohli-Rohit pair aggregate has 3000+ ODI runs together", "partnership-pairs", async (conn) => {
+  const sql = `
+    WITH batting_pairs AS (
+      SELECT d.match_id, d.innings_number,
+        LEAST(d.batter, d.non_striker) AS pair_a,
+        GREATEST(d.batter, d.non_striker) AS pair_b,
+        d.runs_total
+      FROM deliveries d
+      JOIN matches m ON d.match_id = m.match_id
+      WHERE m.match_type = 'ODI'
+        AND (d.batter ILIKE '%Kohli%' OR d.non_striker ILIKE '%Kohli%')
+        AND (d.batter ILIKE '%RG Sharma%' OR d.non_striker ILIKE '%RG Sharma%')
+    ),
+    partnerships AS (
+      SELECT match_id, innings_number, pair_a, pair_b, SUM(runs_total) AS partnership_runs
+      FROM batting_pairs GROUP BY match_id, innings_number, pair_a, pair_b
+    )
+    SELECT pair_a, pair_b, COUNT(*) AS stands, SUM(partnership_runs) AS total_runs,
+      COUNT(*) FILTER (WHERE partnership_runs >= 100) AS hundred_plus_stands
+    FROM partnerships GROUP BY pair_a, pair_b
+  `;
+  const rows = await runQuery(conn, sql);
+  const total = Number(rows[0]?.total_runs ?? 0);
+  const hundreds = Number(rows[0]?.hundred_plus_stands ?? 0);
+  return {
+    pass: rows.length === 1 && total >= 3000 && hundreds >= 5,
+    details: `Kohli-Rohit ODI: ${rows[0]?.stands} stands, ${total} runs, ${hundreds} century stands`,
   };
 });
 

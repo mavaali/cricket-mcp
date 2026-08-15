@@ -108,11 +108,15 @@ export function registerEmergingPlayers(
 
       // Determine recent period
       let recentFilter: string;
+      // recentFilter is applied inside the recent_stats CTE, which selects from
+      // the innings-level CTE where the matches column is exposed as bare
+      // `season` (there is no `m` alias in that scope).
       if (recent_period) {
         params.recent_season = recent_period;
-        recentFilter = "m.season = $recent_season";
+        recentFilter = "season = $recent_season";
       } else {
-        recentFilter = "m.season = (SELECT MAX(season) FROM matches WHERE season IS NOT NULL)";
+        recentFilter =
+          "season = (SELECT MAX(season) FROM matches WHERE season IS NOT NULL)";
       }
 
       let sql: string;
