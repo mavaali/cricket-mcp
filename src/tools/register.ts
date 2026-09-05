@@ -1,3 +1,5 @@
+import { registerDataCoverage } from "./data-coverage.js";
+import { createInvestigationContext, type InvestigationContext } from "../investigation/context.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { registerSearchPlayers } from "./search-players.js";
@@ -70,7 +72,8 @@ function withErrorHandling(server: McpServer): McpServer {
 
 export function registerAllTools(
   rawServer: McpServer,
-  db: Promise<DuckDBConnection>
+  db: Promise<DuckDBConnection>,
+  investigation: InvestigationContext = createInvestigationContext(db)
 ): void {
   const server = withErrorHandling(rawServer);
   registerSearchPlayers(server, db);
@@ -105,4 +108,5 @@ export function registerAllTools(
   registerClutchPerformance(server, db);
   registerSuperOvers(server, db);
   registerStreaks(server, db);
+  registerDataCoverage(server, investigation);
 }

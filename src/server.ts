@@ -1,3 +1,4 @@
+import { createInvestigationContext } from "./investigation/context.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -18,6 +19,8 @@ export interface ServerOptions {
   onelake?: OneLakeConfig;
   /** Local backend only: incrementally update stale data at startup. */
   autoUpdate?: boolean;
+  /** Trusted local source-audit manifest; never supplied by MCP callers. */
+  investigationManifest?: string;
 }
 
 /**
@@ -62,10 +65,13 @@ export async function startServer(
   // Start DB connection in the background — may be slow for OneLake
   // (installs DuckDB extensions, authenticates via Azure CLI, creates views).
   const connectionPromise = initConnection(dbPathOrOptions);
+  const investigation = createInvestigationContext(connectionPromise, typeof dbPathOrOptions === "string"
+    ? { dbPath: dbPathOrOptions }
+    : { dbPath: dbPathOrOptions.dbPath, backend: dbPathOrOptions.backend, manifestPath: dbPathOrOptions.investigationManifest });
 
   // Register tools with the connection promise. Each tool awaits it
   // on first invocation so the tool list is available immediately.
-  registerAllTools(server, connectionPromise);
+  registerAllTools(server, connectionPromise, investigation);
   registerAllPrompts(server);
 
   // Connect the MCP transport BEFORE the DB is ready.
@@ -93,6 +99,9 @@ export async function startHttpServer(
   port: number
 ): Promise<void> {
   const connectionPromise = initConnection(dbPathOrOptions);
+  const investigation = createInvestigationContext(connectionPromise, typeof dbPathOrOptions === "string"
+    ? { dbPath: dbPathOrOptions }
+    : { dbPath: dbPathOrOptions.dbPath, backend: dbPathOrOptions.backend, manifestPath: dbPathOrOptions.investigationManifest });
 
   const sessions = new Map<string, StreamableHTTPServerTransport>();
 
@@ -177,7 +186,7 @@ export async function startHttpServer(
             name: "cricket-mcp",
             version: "1.0.0",
           });
-          registerAllTools(mcpServer, connectionPromise);
+          registerAllTools(mcpServer, connectionPromise, investigation);
           registerAllPrompts(mcpServer);
           await mcpServer.connect(transport);
 

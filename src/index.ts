@@ -98,6 +98,7 @@ program
 
 program
   .command("serve")
+  .option("--investigation-manifest <path>", "Trusted local source-audit manifest for investigation coverage")
   .description("Start the MCP server")
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
   .option(
@@ -141,7 +142,7 @@ program
               },
             };
           })()
-        : { dbPath: options.db, autoUpdate: options.autoUpdate };
+        : { dbPath: options.db, autoUpdate: options.autoUpdate, investigationManifest: options.investigationManifest };
 
     if (options.transport === "http") {
       const port = parseInt(options.port, 10);

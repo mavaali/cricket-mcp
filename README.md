@@ -28,7 +28,12 @@ Ask Claude things like:
 - *"Longest streak of 50+ scores in ODIs?"*
 - *"How do Kohli and Rohit do batting together?"*
 
-## Tools (33 total)
+## Tools (34 total)
+
+### Data Coverage
+| Tool | What it does |
+|------|-------------|
+| `get_data_coverage` | Reports dates, sample counts, identity/style gaps and optional source-audited IPL chase eligibility. [Setup and response semantics](docs/investigation-coverage.md) |
 
 ### Player Stats
 | Tool | What it does |
