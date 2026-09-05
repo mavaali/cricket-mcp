@@ -515,3 +515,5 @@ All data comes from [Cricsheet](https://cricsheet.org), which provides free, ope
 MIT
 
 The `investigate_cricket_claim` prompt guides reproducible Cross-examiner investigations. See [comparison contracts and examples](docs/cohort-comparisons.md).
+
+Investigation chase-state caching is bounded and can be disabled with `--no-investigation-cache`. See [performance and resource limits](docs/investigation-performance.md) for memory tradeoffs and career-impact batching.

@@ -21,6 +21,7 @@ export interface ServerOptions {
   autoUpdate?: boolean;
   /** Trusted local source-audit manifest; never supplied by MCP callers. */
   investigationManifest?: string;
+  investigationCache?: boolean;
 }
 
 /**
@@ -67,7 +68,7 @@ export async function startServer(
   const connectionPromise = initConnection(dbPathOrOptions);
   const investigation = createInvestigationContext(connectionPromise, typeof dbPathOrOptions === "string"
     ? { dbPath: dbPathOrOptions }
-    : { dbPath: dbPathOrOptions.dbPath, backend: dbPathOrOptions.backend, manifestPath: dbPathOrOptions.investigationManifest });
+    : { dbPath: dbPathOrOptions.dbPath, backend: dbPathOrOptions.backend, manifestPath: dbPathOrOptions.investigationManifest, cache: dbPathOrOptions.investigationCache });
 
   // Register tools with the connection promise. Each tool awaits it
   // on first invocation so the tool list is available immediately.
@@ -101,7 +102,7 @@ export async function startHttpServer(
   const connectionPromise = initConnection(dbPathOrOptions);
   const investigation = createInvestigationContext(connectionPromise, typeof dbPathOrOptions === "string"
     ? { dbPath: dbPathOrOptions }
-    : { dbPath: dbPathOrOptions.dbPath, backend: dbPathOrOptions.backend, manifestPath: dbPathOrOptions.investigationManifest });
+    : { dbPath: dbPathOrOptions.dbPath, backend: dbPathOrOptions.backend, manifestPath: dbPathOrOptions.investigationManifest, cache: dbPathOrOptions.investigationCache });
 
   const sessions = new Map<string, StreamableHTTPServerTransport>();
 

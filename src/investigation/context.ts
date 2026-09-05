@@ -26,10 +26,12 @@ export const ManifestSchema = z.object({
   }
 });
 export type Manifest = z.infer<typeof ManifestSchema>;
-export interface InvestigationOptions { backend?: "local" | "onelake"; dbPath?: string; manifestPath?: string }
+export interface InvestigationOptions { backend?: "local" | "onelake"; dbPath?: string; manifestPath?: string; cache?: boolean }
 export interface Snapshot { revision: Revision; manifest?: Manifest }
 export interface InvestigationContext {
   db: Promise<DuckDBConnection>;
+  /** Only the verified, file-bound factory opts into bounded immutable caches. */
+  cacheable?: boolean;
   snapshot(): Promise<Snapshot>;
 }
 const unavailable = (reason: string): Snapshot => ({ revision: { status: "unavailable", id: null, reason } });
@@ -75,7 +77,7 @@ export function createInvestigationContext(db: Promise<DuckDBConnection>, option
       return { revision: { status: "verified", id: `sha256:${hash}:${manifestHash}`, reason: null }, manifest, fingerprint: before };
     } catch { return unavailable("Audit manifest or database verification is unavailable or invalid."); }
   };
-  return { db, async snapshot() {
+  return { db, cacheable: options.cache !== false, async snapshot() {
     if (invalidated) return invalidated;
     initialized ??= initialize();
     const value = await initialized;

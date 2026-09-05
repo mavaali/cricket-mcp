@@ -98,6 +98,7 @@ program
 
 program
   .command("serve")
+  .option("--no-investigation-cache", "Disable the bounded in-memory chase-state cache")
   .option("--investigation-manifest <path>", "Trusted local source-audit manifest for investigation coverage")
   .description("Start the MCP server")
   .option("--db <path>", "DuckDB database path", DEFAULT_DB_PATH)
@@ -142,7 +143,7 @@ program
               },
             };
           })()
-        : { dbPath: options.db, autoUpdate: options.autoUpdate, investigationManifest: options.investigationManifest };
+        : { dbPath: options.db, autoUpdate: options.autoUpdate, investigationManifest: options.investigationManifest, investigationCache: options.investigationCache };
 
     if (options.transport === "http") {
       const port = parseInt(options.port, 10);

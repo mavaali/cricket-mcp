@@ -1,3 +1,4 @@
+import { cachedChase } from "../investigation/chase-cache.js";
 import type { InvestigationContext, Manifest } from "../investigation/context.js";
 import type { Scope } from "../investigation/time-machine-contracts.js";
 import { runQuery } from "./run.js";
@@ -5,6 +6,9 @@ import { runQuery } from "./run.js";
 /** Only source-audited normal second innings are admitted. Filtering a delivery
  * boundary happens AFTER these full-innings windows, never inside them. */
 export async function loadChaseStates(context: InvestigationContext, manifest: Manifest, scope: Scope) {
+  return cachedChase(context, manifest, scope, () => queryChaseStates(context, manifest, scope));
+}
+async function queryChaseStates(context: InvestigationContext, manifest: Manifest, scope: Scope) {
   const clauses = ["m.event_name = $event", "m.match_type = 'T20'", "m.gender = $gender", "i.innings_number=2", "NOT i.is_super_over"];
   const params: Record<string, string | number> = { event: scope.event_name, gender: scope.gender };
   for (const [key, column, op] of [["season","m.season","="],["venue","m.venue","="],["date_from","m.date_start",">="],["date_to","m.date_start","<="],["as_of","COALESCE(m.date_end,m.date_start)","<="]] as const) {
