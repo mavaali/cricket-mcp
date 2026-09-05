@@ -1,3 +1,4 @@
+import { loadCareerTeams } from "../queries/career-teams.js";
 import { BAT, BOWL } from "../queries/innings.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -846,35 +847,72 @@ export function registerMatchImpact(
       );
       const resolvedName = nameResolveRows.length > 0 ? String(nameResolveRows[0].name) : player_name;
 
+      // Batch the five scoring aggregates over the bounded match list.
+      // Resolve team membership by the player role, never an arbitrary innings row.
+      const mids = JSON.stringify(matchListRows.map(r => String(r.match_id)));
+      const matchAggregates = await runQuery(db, `SELECT match_id,
+             SUM(runs_total) AS total_runs,
+             COUNT(*) FILTER (WHERE extras_wides = 0 AND extras_noballs = 0) AS total_balls
+           FROM deliveries WHERE match_id IN (SELECT json_extract_string(value, '$') FROM json_each($mids)) GROUP BY match_id`, { mids });
+      const teamTotals = await runQuery(db, `SELECT d.match_id, d.innings_number, i.batting_team, i.target_runs,
+                  SUM(d.runs_total) AS team_total,
+                  ${BOWL.legalBalls} AS team_balls
+           FROM deliveries d
+           JOIN innings i ON d.match_id = i.match_id AND d.innings_number = i.innings_number
+           WHERE d.match_id IN (SELECT json_extract_string(value, '$') FROM json_each($mids)) AND i.is_super_over = FALSE
+           GROUP BY d.match_id, d.innings_number, i.batting_team, i.target_runs`, { mids });
+      const battingAggregates = await runQuery(db, `SELECT
+             d.match_id, innings_number,
+             SUM(runs_batter) AS runs,
+             COUNT(*) FILTER (WHERE extras_wides = 0) AS balls_faced,
+             MAX(CASE WHEN is_wicket AND wicket_player_out = batter THEN 1 ELSE 0 END) AS was_dismissed,
+             (SELECT COUNT(*) FROM deliveries d2
+              WHERE d2.match_id = d.match_id AND d2.innings_number = d.innings_number
+                AND d2.is_wicket = TRUE
+                AND d2.over_number * 1000 + d2.ball_number <
+                    (SELECT MIN(d3.over_number * 1000 + d3.ball_number)
+                     FROM deliveries d3
+                     WHERE d3.match_id = d.match_id AND d3.innings_number = d.innings_number
+                       AND d3.batter = $pname)
+             ) AS wickets_at_entry
+           FROM deliveries d
+           WHERE d.match_id IN (SELECT json_extract_string(value, '$') FROM json_each($mids)) AND batter = $pname
+           GROUP BY d.match_id, innings_number`, { mids, pname: resolvedName });
+      const bowlingAggregates = await runQuery(db, `SELECT match_id,
+             innings_number,
+             COUNT(*) FILTER (WHERE extras_wides = 0 AND extras_noballs = 0) AS legal_balls,
+             SUM(runs_total - extras_byes - extras_legbyes) AS runs_conceded,
+             COUNT(*) FILTER (WHERE is_wicket AND wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
+             COUNT(*) FILTER (WHERE over_number <= 5 AND extras_wides = 0 AND extras_noballs = 0) AS pp_balls,
+             SUM(CASE WHEN over_number <= 5 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS pp_runs,
+             COUNT(*) FILTER (WHERE over_number BETWEEN 6 AND 14 AND extras_wides = 0 AND extras_noballs = 0) AS mid_balls,
+             SUM(CASE WHEN over_number BETWEEN 6 AND 14 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS mid_runs,
+             COUNT(*) FILTER (WHERE over_number >= 15 AND extras_wides = 0 AND extras_noballs = 0) AS death_balls,
+             SUM(CASE WHEN over_number >= 15 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS death_runs
+           FROM deliveries
+           WHERE match_id IN (SELECT json_extract_string(value, '$') FROM json_each($mids)) AND bowler = $pname
+           GROUP BY match_id, innings_number`, { mids, pname: resolvedName });
+      const fieldingAggregates = await runQuery(db, `SELECT match_id, COUNT(*) AS dismissals
+           FROM deliveries
+           WHERE match_id IN (SELECT json_extract_string(value, '$') FROM json_each($mids))
+             AND is_wicket = TRUE
+             AND wicket_fielder1 = $pname
+             AND wicket_kind IN ('caught', 'stumped', 'run out') GROUP BY match_id`, { mids, pname: resolvedName });
+
+      const careerTeams = await loadCareerTeams(db, matchListRows.map(r => String(r.match_id)), resolvedName);
+
       for (const matchRow of matchListRows) {
         const mid = String(matchRow.match_id);
 
         // Match aggregates
-        const maRows = await runQuery(
-          db,
-          `SELECT
-             SUM(runs_total) AS total_runs,
-             COUNT(*) FILTER (WHERE extras_wides = 0 AND extras_noballs = 0) AS total_balls
-           FROM deliveries WHERE match_id = $mid`,
-          { mid }
-        );
+        const maRows = matchAggregates.filter(r => r.match_id === mid);
         const mTotalRuns = Number(maRows[0]?.total_runs ?? 0);
         const mTotalBalls = Number(maRows[0]?.total_balls ?? 1);
         const mAvgSR = mTotalBalls > 0 ? (mTotalRuns / mTotalBalls) * 100 : 100;
         const mRR = mTotalBalls > 0 ? mTotalRuns / (mTotalBalls / 6) : 6;
 
         // Team totals
-        const ttRows = await runQuery(
-          db,
-          `SELECT d.innings_number, i.batting_team, i.target_runs,
-                  SUM(d.runs_total) AS team_total,
-                  ${BOWL.legalBalls} AS team_balls
-           FROM deliveries d
-           JOIN innings i ON d.match_id = i.match_id AND d.innings_number = i.innings_number
-           WHERE d.match_id = $mid AND i.is_super_over = FALSE
-           GROUP BY d.innings_number, i.batting_team, i.target_runs`,
-          { mid }
-        );
+        const ttRows = teamTotals.filter(r => r.match_id === mid);
         const innMap = new Map<number, { team: string; total: number; balls: number; target: number | null }>();
         for (const r of ttRows) {
           innMap.set(Number(r.innings_number), {
@@ -886,27 +924,7 @@ export function registerMatchImpact(
         }
 
         // Batting impact for this player in this match
-        const batRows = await runQuery(
-          db,
-          `SELECT
-             innings_number,
-             SUM(runs_batter) AS runs,
-             COUNT(*) FILTER (WHERE extras_wides = 0) AS balls_faced,
-             MAX(CASE WHEN is_wicket AND wicket_player_out = batter THEN 1 ELSE 0 END) AS was_dismissed,
-             (SELECT COUNT(*) FROM deliveries d2
-              WHERE d2.match_id = $mid AND d2.innings_number = d.innings_number
-                AND d2.is_wicket = TRUE
-                AND d2.over_number * 1000 + d2.ball_number <
-                    (SELECT MIN(d3.over_number * 1000 + d3.ball_number)
-                     FROM deliveries d3
-                     WHERE d3.match_id = $mid AND d3.innings_number = d.innings_number
-                       AND d3.batter = $pname)
-             ) AS wickets_at_entry
-           FROM deliveries d
-           WHERE match_id = $mid AND batter = $pname
-           GROUP BY innings_number`,
-          { mid, pname: resolvedName }
-        );
+        const batRows = battingAggregates.filter(r => r.match_id === mid);
 
         let batImpact = 0;
         for (const r of batRows) {
@@ -937,24 +955,7 @@ export function registerMatchImpact(
         }
 
         // Bowling impact
-        const bwlRows = await runQuery(
-          db,
-          `SELECT
-             innings_number,
-             COUNT(*) FILTER (WHERE extras_wides = 0 AND extras_noballs = 0) AS legal_balls,
-             SUM(runs_total - extras_byes - extras_legbyes) AS runs_conceded,
-             COUNT(*) FILTER (WHERE is_wicket AND wicket_kind IN ${BOWLING_WICKET_KINDS}) AS wickets,
-             COUNT(*) FILTER (WHERE over_number <= 5 AND extras_wides = 0 AND extras_noballs = 0) AS pp_balls,
-             SUM(CASE WHEN over_number <= 5 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS pp_runs,
-             COUNT(*) FILTER (WHERE over_number BETWEEN 6 AND 14 AND extras_wides = 0 AND extras_noballs = 0) AS mid_balls,
-             SUM(CASE WHEN over_number BETWEEN 6 AND 14 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS mid_runs,
-             COUNT(*) FILTER (WHERE over_number >= 15 AND extras_wides = 0 AND extras_noballs = 0) AS death_balls,
-             SUM(CASE WHEN over_number >= 15 THEN runs_total - extras_byes - extras_legbyes ELSE 0 END) AS death_runs
-           FROM deliveries
-           WHERE match_id = $mid AND bowler = $pname
-           GROUP BY innings_number`,
-          { mid, pname: resolvedName }
-        );
+        const bwlRows = bowlingAggregates.filter(r => r.match_id === mid);
 
         let bwlImpact = 0;
         for (const r of bwlRows) {
@@ -982,16 +983,7 @@ export function registerMatchImpact(
         }
 
         // Fielding impact (simplified)
-        const fldRows = await runQuery(
-          db,
-          `SELECT COUNT(*) AS dismissals
-           FROM deliveries
-           WHERE match_id = $mid
-             AND is_wicket = TRUE
-             AND wicket_fielder1 = $pname
-             AND wicket_kind IN ('caught', 'stumped', 'run out')`,
-          { mid, pname: resolvedName }
-        );
+        const fldRows = fieldingAggregates.filter(r => r.match_id === mid);
         const fldImpact = Number(fldRows[0]?.dismissals ?? 0) * CATCH_BASE;
 
         // Match importance
@@ -1014,16 +1006,8 @@ export function registerMatchImpact(
         const t1 = String(matchRow.team1);
         const t2 = String(matchRow.team2);
         // Find which team the player was on
-        const teamCheck = await runQuery(
-          db,
-          `SELECT DISTINCT i.batting_team FROM deliveries d
-           JOIN innings i ON d.match_id = i.match_id AND d.innings_number = i.innings_number
-           WHERE d.match_id = $mid AND (d.batter = $pname OR d.bowler = $pname)
-           LIMIT 1`,
-          { mid, pname: resolvedName }
-        );
-        const playerTeam = teamCheck.length > 0 ? String(teamCheck[0].batting_team) : t1;
-        const opponent = playerTeam === t1 ? t2 : t1;
+        const playerTeam = careerTeams.find(r => r.match_id === mid)?.player_team;
+        const opponent = playerTeam === t1 ? t2 : playerTeam === t2 ? t1 : 'Unknown';
 
         matchImpacts.push({
           match_id: mid,

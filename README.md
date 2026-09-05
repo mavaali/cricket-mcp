@@ -28,7 +28,21 @@ Ask Claude things like:
 - *"Longest streak of 50+ scores in ODIs?"*
 - *"How do Kohli and Rohit do batting together?"*
 
-## Tools (33 total)
+## Tools (37 total)
+
+### Data Coverage
+| Tool | What it does |
+|------|-------------|
+| `get_data_coverage` | Reports dates, sample counts, identity/style gaps and optional source-audited IPL chase eligibility. [Setup and response semantics](docs/investigation-coverage.md) |
+
+### Match Time Machine
+| Tool | What it does |
+|------|-------------|
+| `find_similar_situations` | Finds source-audited IPL chase states with explicit tolerances and one case per innings |
+| `compare_cohorts` | Declared IPL chase or batting pace/spin contrasts, denominators, phase/season splits, contrary evidence |
+| `get_evidence` | Retrieves the summary, overs or deliveries behind a selected case |
+
+[Inputs, evidence references and limits](docs/time-machine.md)
 
 ### Player Stats
 | Tool | What it does |
@@ -499,3 +513,7 @@ All data comes from [Cricsheet](https://cricsheet.org), which provides free, ope
 ## License
 
 MIT
+
+The `investigate_cricket_claim` prompt guides reproducible Cross-examiner investigations. See [comparison contracts and examples](docs/cohort-comparisons.md).
+
+Investigation chase-state caching is bounded and can be disabled with `--no-investigation-cache`. See [performance and resource limits](docs/investigation-performance.md) for memory tradeoffs and career-impact batching.
