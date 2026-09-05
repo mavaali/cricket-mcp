@@ -1,3 +1,4 @@
+import { registerCohorts } from "./cohorts.js";
 import { registerTimeMachine } from "./time-machine.js";
 import { registerDataCoverage } from "./data-coverage.js";
 import { createInvestigationContext, type InvestigationContext } from "../investigation/context.js";
@@ -111,4 +112,5 @@ export function registerAllTools(
   registerStreaks(server, db);
   registerDataCoverage(server, investigation);
   registerTimeMachine(server, investigation);
+  registerCohorts(server, investigation);
 }

@@ -1,9 +1,11 @@
+import { registerInvestigationPrompt } from "./investigate.js";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 export function registerAllPrompts(server: McpServer): void {
   registerPreMatchBriefing(server);
   registerPlayerProfile(server);
+  registerInvestigationPrompt(server);
 }
 
 function registerPreMatchBriefing(server: McpServer): void {
