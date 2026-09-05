@@ -1,3 +1,4 @@
+import { registerTimeMachine } from "./time-machine.js";
 import { registerDataCoverage } from "./data-coverage.js";
 import { createInvestigationContext, type InvestigationContext } from "../investigation/context.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -109,4 +110,5 @@ export function registerAllTools(
   registerSuperOvers(server, db);
   registerStreaks(server, db);
   registerDataCoverage(server, investigation);
+  registerTimeMachine(server, investigation);
 }

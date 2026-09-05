@@ -13,7 +13,7 @@ export const EnvelopeSchema = z.object({
   data: z.record(z.unknown()),
   resolved_subjects: z.array(z.object({ player_id: z.string(), player_name: z.string() })),
   applied_filters: z.record(z.unknown()),
-  provenance: z.object({ revision: RevisionSchema, definition_version: z.literal("coverage-v1") }),
+  provenance: z.object({ revision: RevisionSchema, definition_version: z.enum(["coverage-v1", "chase-v1"]) }),
   warnings: z.array(z.string()),
 });
 export type Envelope = z.infer<typeof EnvelopeSchema>;

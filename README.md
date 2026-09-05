@@ -28,12 +28,20 @@ Ask Claude things like:
 - *"Longest streak of 50+ scores in ODIs?"*
 - *"How do Kohli and Rohit do batting together?"*
 
-## Tools (34 total)
+## Tools (36 total)
 
 ### Data Coverage
 | Tool | What it does |
 |------|-------------|
 | `get_data_coverage` | Reports dates, sample counts, identity/style gaps and optional source-audited IPL chase eligibility. [Setup and response semantics](docs/investigation-coverage.md) |
+
+### Match Time Machine
+| Tool | What it does |
+|------|-------------|
+| `find_similar_situations` | Finds source-audited IPL chase states with explicit tolerances and one case per innings |
+| `get_evidence` | Retrieves the summary, overs or deliveries behind a selected case |
+
+[Inputs, evidence references and limits](docs/time-machine.md)
 
 ### Player Stats
 | Tool | What it does |
