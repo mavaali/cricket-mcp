@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { runQuery } from "../queries/run.js";
-import { BOWLING_WICKET_KINDS } from "../queries/common.js";
+import { BOWLING_WICKET_KINDS, matchTypePredicate } from "../queries/common.js";
 
 export function registerEmergingPlayers(
   server: McpServer,
@@ -90,8 +90,9 @@ export function registerEmergingPlayers(
 
       let matchTypeFilter = "";
       if (match_type) {
-        matchTypeFilter = "AND m.match_type = $match_type";
-        params.match_type = match_type;
+        const mt = matchTypePredicate(match_type);
+        matchTypeFilter = "AND " + mt.clause;
+        Object.assign(params, mt.params);
       }
       let eventFilter = "";
       if (event_name) {

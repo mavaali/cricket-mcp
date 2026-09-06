@@ -17,7 +17,7 @@ export const MatchFilterSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Cricket format: "Test", "ODI", "T20", "IT20", "MDM", "ODM". T20 includes domestic T20 leagues. IT20 is international T20 only.'
+      'Cricket format: "Test", "ODI", "T20", "IT20", "MDM", "ODM". T20 includes domestic leagues and internationals. IT20 = international T20 only (both sides national teams), spanning full-member and associate T20Is.'
     ),
   gender: z
     .enum(["male", "female"])
@@ -66,13 +66,38 @@ export interface FilterResult {
   params: Record<string, string | number>;
 }
 
+/**
+ * Resolve a `match_type` filter to a SQL predicate on the `m` (matches) alias.
+ *
+ * Cricsheet stores almost all full-member men's & women's T20Is under
+ * match_type='T20' (with team_type='international'); only associate/qualifier
+ * T20Is carry the raw 'IT20' label. So the schema's documented "IT20 =
+ * international T20 only" contract spans BOTH raw labels, gated on team_type.
+ * Without this, an IT20 filter silently returns empty for players like Kohli or
+ * Root whose T20Is live under 'T20' (issue #19).
+ *
+ * Returns the predicate plus any bind params to merge into the query's params.
+ */
+export function matchTypePredicate(
+  matchType: string
+): { clause: string; params: Record<string, string> } {
+  if (matchType === "IT20") {
+    return {
+      clause: "(m.match_type IN ('T20', 'IT20') AND m.team_type = 'international')",
+      params: {},
+    };
+  }
+  return { clause: "m.match_type = $match_type", params: { match_type: matchType } };
+}
+
 export function buildMatchFilter(filters: MatchFilter): FilterResult {
   const clauses: string[] = [];
   const params: Record<string, string | number> = {};
 
   if (filters.match_type) {
-    clauses.push("m.match_type = $match_type");
-    params.match_type = filters.match_type;
+    const mt = matchTypePredicate(filters.match_type);
+    clauses.push(mt.clause);
+    Object.assign(params, mt.params);
   }
   if (filters.gender) {
     clauses.push("m.gender = $gender");
