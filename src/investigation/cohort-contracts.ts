@@ -6,8 +6,8 @@ export const PhaseSchema=z.enum(['powerplay','middle','death']);
 export const ChaseGroupSchema=z.object({label,runs_required:range.optional(),legal_balls_remaining:range.optional(),wickets_remaining:range.optional(),batting_team:z.string().min(1).max(100).optional(),outcome:z.enum(['won','lost','tie']).optional()}).strict();
 const styleGroup=z.object({label,style:z.enum(['pace','spin']),phases:z.array(PhaseSchema).min(1).max(3).refine(x=>new Set(x).size===x.length)}).strict();
 export const RecipeSchema=z.discriminatedUnion('kind',[
- z.object({kind:z.literal('chase'),evidence_set:z.object({version:z.literal('chase-v1'),revision:z.string().max(300),selection:SelectionSchema}).strict(),groups:z.tuple([ChaseGroupSchema,ChaseGroupSchema]),metric:z.enum(['win_rate','next_six_or_end_runs'])}).strict(),
- z.object({kind:z.literal('batting_style'),scope:ScopeSchema,player_id:z.string().trim().min(1).max(100),groups:z.tuple([styleGroup,styleGroup]),metric:z.enum(['strike_rate','boundary_rate'])}).strict(),
+ z.object({kind:z.literal('chase'),evidence_set:z.object({version:z.literal('chase-v1'),revision:z.string().max(300),selection:SelectionSchema}).strict(),groups:z.array(ChaseGroupSchema).length(2),metric:z.enum(['win_rate','next_six_or_end_runs'])}).strict(),
+ z.object({kind:z.literal('batting_style'),scope:ScopeSchema,player_id:z.string().trim().min(1).max(100),groups:z.array(styleGroup).length(2),metric:z.enum(['strike_rate','boundary_rate'])}).strict(),
 ]);
 export const CompareInputSchema=z.object({comparison:RecipeSchema,expected_revision:z.string().max(300).optional(),stratify_by:z.enum(['none','season','phase']).default('none'),page_size:z.number().int().min(1).max(50).default(10),cursor:CursorSchema.optional()}).strict();
 export const CohortRefSchema=z.object({version:z.literal('cohort-v1'),revision:z.string().max(300),comparison:RecipeSchema,group:z.number().int().min(0).max(1),match_id:z.string().max(100),innings_number:z.number().int().min(1).max(2)}).strict();
