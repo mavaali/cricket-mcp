@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS innings (
   declared         BOOLEAN DEFAULT FALSE,
   forfeited        BOOLEAN DEFAULT FALSE,
   target_runs      INTEGER,
-  target_overs     INTEGER,
+  target_overs     DECIMAL(4,1),  -- overs.balls notation: 40.2 = 40 overs 2 balls
   PRIMARY KEY (match_id, innings_number)
 );
 
@@ -133,6 +133,19 @@ export async function migrateSchema(conn: DuckDBConnection): Promise<void> {
     if (!existingCols.has(col.name)) {
       await conn.run(`ALTER TABLE players ADD COLUMN ${col.name} ${col.type}`);
     }
+  }
+
+  // Revised (DLS) targets carry fractional overs in overs.balls notation
+  // (e.g. 40.2). Databases built before this was DECIMAL hold truncated values
+  // until the next full ingest.
+  const targetOvers = await conn.runAndReadAll(
+    `SELECT data_type FROM information_schema.columns
+     WHERE table_name = 'innings' AND column_name = 'target_overs'`
+  );
+  if (targetOvers.getRowObjectsJson()[0]?.data_type === "INTEGER") {
+    await conn.run(
+      "ALTER TABLE innings ALTER COLUMN target_overs TYPE DECIMAL(4,1)"
+    );
   }
 }
 
