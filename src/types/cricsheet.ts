@@ -146,6 +146,7 @@ export interface InningsRow {
   declared: boolean;
   forfeited: boolean;
   target_runs: number | null;
+  /** Overs in overs.balls notation; may be fractional (40.2 = 40 overs 2 balls). */
   target_overs: number | null;
 }
 

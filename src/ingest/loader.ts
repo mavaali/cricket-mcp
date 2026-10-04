@@ -76,7 +76,7 @@ export async function loadBatch(
       appendStrOrNull(appender, m.event_group);
       appendStrOrNull(appender, m.event_stage);
       appendIntOrNull(appender, m.overs_per_side);
-      appender.appendInteger(m.balls_per_over);
+      appendInt(appender, m.balls_per_over);
       appendStrOrNull(appender, m.team_type);
       appender.endRow();
     }
@@ -89,14 +89,14 @@ export async function loadBatch(
     const appender = await conn.createAppender("innings");
     for (const i of allInnings) {
       appendStr(appender, i.match_id);
-      appender.appendInteger(i.innings_number);
+      appendInt(appender, i.innings_number);
       appendStr(appender, i.batting_team);
       appendStr(appender, i.bowling_team);
       appender.appendBoolean(i.is_super_over);
       appender.appendBoolean(i.declared);
       appender.appendBoolean(i.forfeited);
       appendIntOrNull(appender, i.target_runs);
-      appendIntOrNull(appender, i.target_overs);
+      appendDoubleOrNull(appender, i.target_overs);
       appender.endRow();
     }
     appender.flushSync();
@@ -108,24 +108,24 @@ export async function loadBatch(
     const appender = await conn.createAppender("deliveries");
     for (const d of allDeliveries) {
       appendStr(appender, d.match_id);
-      appender.appendInteger(d.innings_number);
-      appender.appendInteger(d.over_number);
-      appender.appendInteger(d.ball_number);
+      appendInt(appender, d.innings_number);
+      appendInt(appender, d.over_number);
+      appendInt(appender, d.ball_number);
       appendStr(appender, d.batter);
       appendStrOrNull(appender, d.batter_id);
       appendStr(appender, d.bowler);
       appendStrOrNull(appender, d.bowler_id);
       appendStr(appender, d.non_striker);
       appendStrOrNull(appender, d.non_striker_id);
-      appender.appendInteger(d.runs_batter);
-      appender.appendInteger(d.runs_extras);
-      appender.appendInteger(d.runs_total);
+      appendInt(appender, d.runs_batter);
+      appendInt(appender, d.runs_extras);
+      appendInt(appender, d.runs_total);
       appender.appendBoolean(d.runs_non_boundary);
-      appender.appendInteger(d.extras_wides);
-      appender.appendInteger(d.extras_noballs);
-      appender.appendInteger(d.extras_byes);
-      appender.appendInteger(d.extras_legbyes);
-      appender.appendInteger(d.extras_penalty);
+      appendInt(appender, d.extras_wides);
+      appendInt(appender, d.extras_noballs);
+      appendInt(appender, d.extras_byes);
+      appendInt(appender, d.extras_legbyes);
+      appendInt(appender, d.extras_penalty);
       appender.appendBoolean(d.is_wicket);
       appendStrOrNull(appender, d.wicket_kind);
       appendStrOrNull(appender, d.wicket_player_out);
@@ -164,6 +164,29 @@ function appendIntOrNull(
   if (value == null) {
     appender.appendNull();
   } else {
-    appender.appendInteger(value);
+    appendInt(appender, value);
+  }
+}
+
+// Older @duckdb/node-api builds accept a non-integer here without complaint
+// and corrupt the native heap, crashing ingest nondeterministically. Fail loudly.
+function appendInt(
+  appender: { appendInteger(v: number): void },
+  value: number
+): void {
+  if (!Number.isInteger(value)) {
+    throw new Error(`Expected integer for INTEGER column, got ${value}`);
+  }
+  appender.appendInteger(value);
+}
+
+function appendDoubleOrNull(
+  appender: { appendDouble(v: number): void; appendNull(): void },
+  value: number | null | undefined
+): void {
+  if (value == null) {
+    appender.appendNull();
+  } else {
+    appender.appendDouble(value);
   }
 }
