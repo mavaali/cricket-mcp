@@ -200,6 +200,20 @@ eval_("Format filter works - T20 filter excludes ODI data", "batting-stats", asy
   };
 });
 
+eval_("IT20 resolves full-member T20Is (issue #19)", "batting-stats", async (conn) => {
+  // Cricsheet files full-member T20Is under match_type='T20'; IT20 must span both
+  // raw labels gated on team_type, else Kohli's T20Is read as empty.
+  const { sql, params } = buildBattingStatsQuery("V Kohli", { match_type: "IT20" });
+  const rows = await runQuery(conn, sql, params);
+  const runs = Number(rows[0]?.runs ?? 0);
+  const matches = Number(rows[0]?.matches ?? 0);
+  // Kohli's T20I career: >3000 runs across 100+ matches, and less than his all-T20 total.
+  return {
+    pass: runs > 3000 && matches > 100,
+    details: `Kohli IT20: ${matches} matches, ${runs} runs (expected non-empty T20I career)`,
+  };
+});
+
 eval_("Nonexistent player returns empty", "batting-stats", async (conn) => {
   const { sql, params } = buildBattingStatsQuery("Zzzyxxx Nonexistent", {});
   const rows = await runQuery(conn, sql, params);
