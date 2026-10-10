@@ -2,9 +2,9 @@
 
 A cricket stats nerd's dream, wired directly into Claude.
 
-**cricket-mcp** is an MCP (Model Context Protocol) server that turns 10.9 million ball-by-ball deliveries from [Cricsheet](https://cricsheet.org) into a queryable cricket brain. Think ESPNcricinfo's Statsguru, but you just *ask questions in plain English* and get answers.
+**cricket-mcp** is an MCP (Model Context Protocol) server that turns 11.7 million ball-by-ball deliveries from [Cricsheet](https://cricsheet.org) into a queryable cricket brain. Think ESPNcricinfo's Statsguru, but you just *ask questions in plain English* and get answers.
 
-21,000+ matches. Every format. Every ball. All sitting in a local DuckDB database that answers in milliseconds.
+23,000+ matches. Every format. Every ball. All sitting in a local DuckDB database that answers in milliseconds.
 
 ## What can it do?
 
@@ -143,7 +143,7 @@ npm install
 
 ### Ingest the data
 
-This downloads all Cricsheet data (~94 MB ZIP, 21,000+ matches), loads it into a local DuckDB database, and enriches player metadata (batting/bowling styles) from the bundled CSV — one command, nothing else to run:
+This downloads all Cricsheet data (~141 MB ZIP, 23,000+ matches), loads it into a local DuckDB database, and enriches player metadata (batting/bowling styles) from the bundled CSV — one command, nothing else to run:
 
 ```bash
 npm run ingest
@@ -153,14 +153,14 @@ Takes a few minutes. You'll see progress like:
 
 ```
 Downloading from https://cricsheet.org/downloads/all_json.zip...
-Download size: 93.7 MB
-Extracted 21270 JSON files
-Ingested 21270/21270 matches (10,895,339 deliveries)
+Download size: 140.8 MB
+Extracted 23080 JSON files
+Ingested 23080/23080 matches (11,667,961 deliveries)
 Creating indexes...
 === Ingestion Complete ===
-  Matches:    21270
-  Deliveries: 10895339
-  Players:    14406
+  Matches:    23080
+  Deliveries: 11667961
+  Players:    15245
 ```
 
 ### Keep data up to date
@@ -308,7 +308,7 @@ docker build -t cricket-mcp .
 docker run -p 3000:3000 cricket-mcp
 ```
 
-The build takes a few minutes (downloads ~94 MB of Cricsheet data, ingests 21K+ matches, enriches player metadata). The resulting image is ~600 MB.
+The build takes a few minutes (downloads ~141 MB of Cricsheet data, ingests 23K+ matches, enriches player metadata). The resulting image is ~600 MB.
 
 To deploy on any cloud provider, push the image to a container registry and run it on a VM, managed container service (Cloud Run, ECS, Azure Container Apps), or Kubernetes.
 
@@ -405,10 +405,10 @@ Uses `get_partnerships` with `player_name: "Kohli"`, `player2_name: "RG Sharma"`
 ### Database schema
 
 Four tables in a star schema:
-- **players** — 14K players with Cricsheet registry IDs (optionally enriched with batting style, bowling style, playing role, country)
-- **matches** — 21K matches with metadata (teams, venue, outcome, tournament)
+- **players** — 15K players with Cricsheet registry IDs (optionally enriched with batting style, bowling style, playing role, country)
+- **matches** — 23K matches with metadata (teams, venue, outcome, tournament)
 - **innings** — innings-level data (batting/bowling team, targets, declarations)
-- **deliveries** — 10.9M rows, one per ball bowled (batter, bowler, runs, extras, wickets)
+- **deliveries** — 11.7M rows, one per ball bowled (batter, bowler, runs, extras, wickets)
 
 ### Cricket logic handled correctly
 
@@ -433,7 +433,7 @@ All statistics are derived from [Cricsheet](https://cricsheet.org) ball-by-ball 
 | **T20Is** | ~Feb 2005 | Near-complete from the format's inception (first T20I was Feb 2005). |
 | **T20 (domestic)** | ~Apr 2008 | IPL Season 1 onwards. Also includes BBL, CPL, PSL, SA20, and other domestic T20 leagues where Cricsheet has coverage. |
 
-Data is updated regularly and includes matches through early 2026 at time of writing.
+Data is updated regularly and includes matches through early October 2026 at time of writing.
 
 ### What this means in practice
 
