@@ -17,7 +17,7 @@ const program = new Command();
 program
   .name("cricket-mcp")
   .description("Cricket statistics MCP server powered by Cricsheet data")
-  .version("1.0.0");
+  .version("0.11.0");
 
 program
   .command("ingest")

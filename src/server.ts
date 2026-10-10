@@ -60,7 +60,7 @@ export async function startServer(
 ): Promise<void> {
   const server = new McpServer({
     name: "cricket-mcp",
-    version: "1.0.0",
+    version: "0.11.0",
   });
 
   // Start DB connection in the background — may be slow for OneLake
@@ -185,7 +185,7 @@ export async function startHttpServer(
 
           const mcpServer = new McpServer({
             name: "cricket-mcp",
-            version: "1.0.0",
+            version: "0.11.0",
           });
           registerAllTools(mcpServer, connectionPromise, investigation);
           registerAllPrompts(mcpServer);

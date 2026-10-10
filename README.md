@@ -243,7 +243,7 @@ The `-y` flag prevents npx from prompting for install confirmation, which would 
 
 ### OneLake backend (Microsoft Fabric)
 
-Instead of a local DuckDB file, cricket-mcp can read Delta tables directly from a Fabric lakehouse via OneLake. All 33 tools work unchanged — DuckDB's `delta` and `azure` extensions handle the reads.
+Instead of a local DuckDB file, cricket-mcp can read Delta tables directly from a Fabric lakehouse via OneLake. The 33 core stats tools work unchanged — DuckDB's `delta` and `azure` extensions handle the reads.
 
 **Prerequisites:**
 - Azure CLI installed and logged in (`az login`)
@@ -400,7 +400,7 @@ Uses `get_partnerships` with `player_name: "Kohli"`, `player2_name: "RG Sharma"`
 
 1. **Data**: [Cricsheet](https://cricsheet.org) provides free, open ball-by-ball data for every international and major domestic cricket match in JSON format.
 2. **Storage**: The `ingest` command downloads, parses, and loads this into a local [DuckDB](https://duckdb.org) database — a columnar analytics engine that eats aggregation queries for breakfast.
-3. **Server**: The MCP server exposes 33 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
+3. **Server**: The MCP server exposes 37 tools over stdio. Claude picks the right tool based on your question, passes the right filters, and returns the stats.
 
 ### Database schema
 
@@ -447,6 +447,15 @@ Data is updated regularly and includes matches through early 2026 at time of wri
 Within the coverage window, the data is ball-by-ball — every delivery, every run, every dismissal, every extra. Phase analysis, matchup breakdowns, strike rates, dot ball percentages, and other granular metrics are all derived from actual delivery data, not aggregated scorecards.
 
 ## Changelog
+
+### v0.11.0
+- **Reproducible IPL investigations** (33 → 37 tools): `get_data_coverage`, `find_similar_situations`, `compare_cohorts` and `get_evidence`, plus a Cricket Cross-examiner prompt. Source-audited chase eligibility and file-bound revision checks keep stale or unverified data from being presented as reproducible evidence. One verified chase scope is cached (capped at 150,000 rows / 192 MiB); disable with `--no-investigation-cache`.
+- **Faster career impact**: `get_career_impact` now runs 8 queries instead of 2 + 6N (50 matches: ~413 ms → 42 ms). Role-aware team lookup fixes a bug that could label a player's own team as the opponent.
+- **`IT20` now means international T20**: Cricsheet files full-member T20Is under `T20`, so `match_type: "IT20"` previously returned nothing for players like Kohli or Root. It now matches both raw labels where both sides are national teams (#19).
+- **ChatGPT compatibility**: `compare_cohorts` and `get_evidence` publish object-valued array schemas, which ChatGPT's MCP client requires.
+- **Ingest fixes**: `ingest` rebuilds the database from scratch (re-ingesting into an existing DB hit primary-key violations), and no longer crashes nondeterministically on revised DLS targets. `innings.target_overs` is now `DECIMAL(4,1)` so fractional overs (e.g. `40.2`) are kept instead of truncated; existing databases are migrated on open. `@duckdb/node-api` bumped to 1.5.6-r.1.
+- Version numbers in `package.json`, the CLI and the MCP server handshake now track this changelog (previously a static `1.0.0`).
+- CI runs the build, strict test typecheck and isolated fixture tests.
 
 ### v0.10.0
 - **One-command setup**: `ingest` and `update` now run player-metadata enrichment automatically from the bundled CSV (`--no-enrich` to skip, `--enrich-csv` to override). The separate `enrich` step is no longer required; the command remains for manual/custom-CSV runs and now defaults to the bundled CSV.
