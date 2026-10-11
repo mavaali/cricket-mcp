@@ -435,6 +435,17 @@ All statistics are derived from [Cricsheet](https://cricsheet.org) ball-by-ball 
 
 Data is updated regularly and includes matches through early October 2026 at time of writing.
 
+### Withheld matches: Afghanistan men
+
+Since 14 November 2024, Cricsheet has [withheld](https://cricsheet.org/withheld-matches) every match involving the Afghanistan men's team, plus all Afghanistan Premier League matches, as a protest over the treatment of Afghanistan's exiled women players. These matches are not in Cricsheet's downloads (379 withheld as of October 2026), so they are not in this database either. This isn't an ingest bug, and the server doesn't fill the gap from another source.
+
+- **No Afghanistan men's Tests, ODIs or T20Is.** Queries for Afghanistan as a team return nothing.
+- **Afghan players' stats are partial.** Rashid Khan, for example, appears only in franchise T20 leagues (414 matches), with no internationals.
+- **Other teams' records are slightly off.** Head-to-heads, team records, venue stats and player career figures leave out games against Afghanistan.
+- Women's cricket is unaffected.
+
+The server announces this gap to MCP clients in its `instructions`, and `get_data_coverage` includes it in `warnings` for any scope that isn't women-only.
+
 ### What this means in practice
 
 - **Career stats for active or recent players** (Smith, Kohli, Root, Bumrah, etc.) are comprehensive and reliable.
@@ -447,6 +458,9 @@ Data is updated regularly and includes matches through early October 2026 at tim
 Within the coverage window, the data is ball-by-ball — every delivery, every run, every dismissal, every extra. Phase analysis, matchup breakdowns, strike rates, dot ball percentages, and other granular metrics are all derived from actual delivery data, not aggregated scorecards.
 
 ## Changelog
+
+### Unreleased
+- **Withheld-match disclosure**: Cricsheet withholds Afghanistan men's matches and the Afghanistan Premier League. The server now states this in its MCP `instructions`, and `get_data_coverage` adds it to `warnings` (except for women-only scopes). The README documents the gap and what it affects.
 
 ### v0.11.0
 - **Reproducible IPL investigations** (33 → 37 tools): `get_data_coverage`, `find_similar_situations`, `compare_cohorts` and `get_evidence`, plus a Cricket Cross-examiner prompt. Source-audited chase eligibility and file-bound revision checks keep stale or unverified data from being presented as reproducible evidence. One verified chase scope is cached (capped at 150,000 rows / 192 MiB); disable with `--no-investigation-cache`.
