@@ -12,6 +12,15 @@ import { migrateSchema } from "./db/schema.js";
 import { ensureFresh } from "./ingest/freshness.js";
 import { registerAllTools } from "./tools/register.js";
 import { registerAllPrompts } from "./prompts/register.js";
+import { SERVER_INSTRUCTIONS } from "./source-exclusions.js";
+
+/** One MCP server per transport/session, sharing name, version and instructions. */
+export function createMcpServer(): McpServer {
+  return new McpServer(
+    { name: "cricket-mcp", version: "0.11.0" },
+    { instructions: SERVER_INSTRUCTIONS }
+  );
+}
 
 export interface ServerOptions {
   dbPath?: string;
@@ -58,10 +67,7 @@ function initConnection(
 export async function startServer(
   dbPathOrOptions: string | ServerOptions
 ): Promise<void> {
-  const server = new McpServer({
-    name: "cricket-mcp",
-    version: "0.11.0",
-  });
+  const server = createMcpServer();
 
   // Start DB connection in the background — may be slow for OneLake
   // (installs DuckDB extensions, authenticates via Azure CLI, creates views).
@@ -183,10 +189,7 @@ export async function startHttpServer(
             }
           };
 
-          const mcpServer = new McpServer({
-            name: "cricket-mcp",
-            version: "0.11.0",
-          });
+          const mcpServer = createMcpServer();
           registerAllTools(mcpServer, connectionPromise, investigation);
           registerAllPrompts(mcpServer);
           await mcpServer.connect(transport);

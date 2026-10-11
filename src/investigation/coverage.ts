@@ -3,6 +3,7 @@ import { runQuery } from "../queries/run.js";
 import { CoverageInputSchema, envelope, type Envelope } from "./contracts.js";
 import type { InvestigationContext } from "./context.js";
 import { resolveIdentity } from "./identity.js";
+import { WITHHELD_MATCHES_NOTE } from "../source-exclusions.js";
 
 export async function getDataCoverage(context: InvestigationContext, raw: unknown): Promise<Envelope> {
   const args = CoverageInputSchema.parse(raw);
@@ -46,6 +47,7 @@ export async function getDataCoverage(context: InvestigationContext, raw: unknow
     unknown_stage_matches: n("unknown_stage_matches"),
   };
   const warnings = ["Coverage describes stored records, not completeness against all real-world cricket.", "Style coverage does not establish enrichment accuracy."];
+  if (args.gender !== "female") warnings.push(WITHHELD_MATCHES_NOTE);
   if (revision.status !== "verified") warnings.push(revision.reason!);
   let status: Envelope["status"] = n("matches") === 0 ? "empty" : "ok";
   if (args.capability === "bowling_style" && n("matches") > 0 && n("known_style_deliveries") === 0) status = "insufficient_evidence";
